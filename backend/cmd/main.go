@@ -24,7 +24,7 @@ import (
 // @contact.name   Bouquet App Support
 // @contact.email  support@bouquet-app.id
 
-// @host      astro16-production.up.railway.app/
+// @host      astro16-production.up.railway.app
 // @BasePath  /api/v1
 
 // @securityDefinitions.apikey ApiKeyAuth

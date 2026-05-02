@@ -1,0 +1,643 @@
+package handlers
+
+import (
+	"log"
+	"net/http"
+	"time"
+
+	"bouquet-app/internal/database"
+	"bouquet-app/internal/models"
+	"bouquet-app/internal/services"
+
+	"github.com/gin-gonic/gin"
+)
+
+// ────────────────────────────────────────────────────────────
+// Bouquet Types
+// ────────────────────────────────────────────────────────────
+
+// GetBouquetTypes godoc
+// @Summary      Ambil semua tipe bouquet
+// @Tags         bouquet
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /bouquet-types [get]
+func GetBouquetTypes(c *gin.Context) {
+	types := services.GetAllBouquetTypes()
+	c.JSON(http.StatusOK, gin.H{"data": types})
+}
+
+// ────────────────────────────────────────────────────────────
+// Flowers
+// ────────────────────────────────────────────────────────────
+
+// GetFlowers godoc
+// @Summary      Ambil semua bunga dari database
+// @Tags         flowers
+// @Produce      json
+// @Param        occasion  query  string  false  "Filter by occasion ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /flowers [get]
+func GetFlowers(c *gin.Context) {
+	occasionID := c.Query("occasion")
+	flowers := services.GetAllFlowers()
+
+	if occasionID != "" {
+		filtered := make([]models.Flower, 0)
+		for _, f := range flowers {
+			for _, occ := range f.Occasions {
+				if occ == occasionID {
+					filtered = append(filtered, f)
+					break
+				}
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"data": filtered})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": flowers})
+}
+
+// ────────────────────────────────────────────────────────────
+// Catalog Bouquet
+// ────────────────────────────────────────────────────────────
+
+// GetCatalog godoc
+// @Summary      Ambil katalog bouquet pre-made
+// @Tags         catalog
+// @Produce      json
+// @Param        occasion  query  string  false  "Filter by occasion"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /catalog [get]
+func GetCatalog(c *gin.Context) {
+	catalogs := services.GetAllCatalog()
+	occasionFilter := c.Query("occasion")
+
+	if occasionFilter != "" {
+		filtered := make([]models.CatalogBouquetDB, 0)
+		for _, cat := range catalogs {
+			if cat.Occasion == occasionFilter {
+				filtered = append(filtered, cat)
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"data": filtered})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": catalogs})
+}
+
+// ────────────────────────────────────────────────────────────
+// AI Agents
+// ────────────────────────────────────────────────────────────
+
+// AgentVerifySelection godoc
+// @Summary      Agent 1: Verifikasi pilihan momen & rekomendasikan bunga
+// @Tags         agent
+// @Accept       json
+// @Produce      json
+// @Param        body  body  models.AgentVerifyRequest  true  "Request body"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /agent/verify-selection [post]
+func AgentVerifySelection(c *gin.Context) {
+	var req models.AgentVerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	allFlowers := services.GetAllFlowers()
+	result, err := services.Agent1VerifySelection(req, allFlowers)
+	if err != nil {
+		log.Printf("[AgentVerifySelection] error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// AgentGenerateBouquet godoc
+// @Summary      Agent 2: Generate desain bouquet berdasarkan bunga pilihan
+// @Tags         agent
+// @Accept       json
+// @Produce      json
+// @Param        X-Session-ID  header  string  true  "Session ID untuk rate limiting"
+// @Param        body  body  models.GenerateBouquetRequest  true  "Request body"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      429  {object}  map[string]interface{}  "Batas generate tercapai"
+// @Router       /agent/generate-bouquet [post]
+func AgentGenerateBouquet(c *gin.Context) {
+	var req models.GenerateBouquetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.SelectedFlowers) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Pilih minimal 1 jenis bunga"})
+		return
+	}
+
+	// Rate limiting: max 2x generate gratis per session
+	sessionID := c.GetHeader("X-Session-ID")
+	if sessionID == "" {
+		sessionID = c.ClientIP() // fallback ke IP jika tidak ada session
+	}
+
+	maxFree := 2
+	session, err := services.GetOrCreateSession(sessionID)
+	if err != nil {
+		log.Printf("[AgentGenerateBouquet] session error: %v", err)
+	} else if session.GenerateCount >= maxFree && !session.IsPaid {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":          "Batas generate gratis tercapai (2x). Silakan lakukan pembelian untuk generate lebih banyak.",
+			"generate_count": session.GenerateCount,
+			"limit":          maxFree,
+			"is_limited":     true,
+		})
+		return
+	}
+
+	// Hitung total stem count dari pilihan user untuk dikirim ke AI
+	totalStemCount := 0
+	for _, sf := range req.SelectedFlowers {
+		totalStemCount += sf.Quantity
+	}
+	req.TotalStemCount = totalStemCount
+
+	result, err := services.Agent2GenerateBouquet(req)
+	if err != nil {
+		log.Printf("[AgentGenerateBouquet] error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal generate desain: " + err.Error()})
+		return
+	}
+
+	// Increment session counter setelah berhasil
+	if session != nil {
+		services.IncrementGenerateCount(sessionID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":           result,
+		"generate_count": session.GenerateCount + 1,
+		"limit":          maxFree,
+	})
+}
+
+// GetGenerateStatus godoc
+// @Summary      Cek status generate session (sisa kuota)
+// @Tags         agent
+// @Produce      json
+// @Param        X-Session-ID  header  string  true  "Session ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /agent/generate-status [get]
+func GetGenerateStatus(c *gin.Context) {
+	sessionID := c.GetHeader("X-Session-ID")
+	if sessionID == "" {
+		sessionID = c.ClientIP()
+	}
+	session, err := services.GetOrCreateSession(sessionID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"generate_count": 0, "limit": 2, "is_limited": false})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"generate_count": session.GenerateCount,
+		"limit":          2,
+		"is_limited":     session.GenerateCount >= 2 && !session.IsPaid,
+		"is_paid":        session.IsPaid,
+	})
+}
+
+// ────────────────────────────────────────────────────────────
+// Orders
+// ────────────────────────────────────────────────────────────
+
+// CreateOrder godoc
+// @Summary      Buat order baru
+// @Tags         orders
+// @Accept       json
+// @Produce      json
+// @Param        body  body  models.CreateOrderRequest  true  "Request body"
+// @Success      201  {object}  map[string]interface{}
+// @Router       /orders [post]
+func CreateOrder(c *gin.Context) {
+	var req models.CreateOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[CreateOrder] bind error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.OrderSource == "" {
+		req.OrderSource = "ai_generated"
+	}
+
+	order := &models.Order{
+		ID:               services.GenerateOrderID(),
+		CustomerName:     req.CustomerName,
+		CustomerEmail:    req.CustomerEmail,
+		CustomerPhone:    req.CustomerPhone,
+		BouquetTypeID:    req.BouquetTypeID,
+		SelectedFlowers:  req.SelectedFlowers,
+		DesignID:         req.DesignID,
+		DesignName:       req.DesignName,
+		Size:             req.Size,
+		TotalAmount:      req.TotalAmount,
+		Notes:            req.Notes,
+		ShippingAddress:  req.ShippingAddress,
+		ShippingCity:     req.ShippingCity,
+		ShippingPostcode: req.ShippingPostcode,
+		ShippingPhone:    req.ShippingPhone,
+		CourierService:   req.CourierService,
+		OrderSource:      req.OrderSource,
+		CatalogItemID:    req.CatalogItemID,
+		Status:           "pending",
+		CreatedAt:        time.Now(),
+	}
+
+	if err := services.SaveOrder(order); err != nil {
+		log.Printf("[CreateOrder] save error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan order: " + err.Error()})
+		return
+	}
+
+	log.Printf("[CreateOrder] berhasil: %s, amount: %d", order.ID, order.TotalAmount)
+	c.JSON(http.StatusCreated, gin.H{"data": order})
+}
+
+// CreatePaymentToken godoc
+// @Summary      Buat token pembayaran Midtrans Snap
+// @Tags         payment
+// @Accept       json
+// @Produce      json
+// @Param        body  body  models.PaymentTokenRequest  true  "Request body"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /payment/token [post]
+func CreatePaymentToken(c *gin.Context) {
+	var req models.PaymentTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	order, ok := services.GetOrderByID(req.OrderID)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order tidak ditemukan: " + req.OrderID})
+		return
+	}
+
+	log.Printf("[CreatePaymentToken] order: %s, amount: %d", order.ID, order.TotalAmount)
+
+	tokenResp, err := services.MidtransCreateToken(order)
+	if err != nil {
+		log.Printf("[CreatePaymentToken] Midtrans error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Gagal membuat token pembayaran",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": tokenResp})
+}
+
+// PaymentNotification godoc
+// @Summary      Webhook notifikasi pembayaran dari Midtrans
+// @Tags         payment
+// @Accept       json
+// @Produce      json
+// @Router       /payment/notification [post]
+func PaymentNotification(c *gin.Context) {
+	var notification map[string]interface{}
+	if err := c.ShouldBindJSON(&notification); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	orderID, _ := notification["order_id"].(string)
+	transactionStatus, _ := notification["transaction_status"].(string)
+	transactionID, _ := notification["transaction_id"].(string)
+
+	log.Printf("[PaymentNotification] order: %s, status: %s", orderID, transactionStatus)
+
+	var status string
+	switch transactionStatus {
+	case "capture", "settlement":
+		status = "paid"
+	case "pending":
+		status = "pending"
+	case "deny", "expire", "cancel":
+		status = "failed"
+	default:
+		status = "unknown"
+	}
+
+	if err := services.UpdateOrderStatus(orderID, status, transactionID); err != nil {
+		log.Printf("[PaymentNotification] update error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update status order"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// GetOrder godoc
+// @Summary      Ambil detail order berdasarkan ID
+// @Tags         orders
+// @Produce      json
+// @Param        id  path  string  true  "Order ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /orders/{id} [get]
+func GetOrder(c *gin.Context) {
+	id := c.Param("id")
+	order, ok := services.GetOrderByID(id)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order tidak ditemukan"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": order})
+}
+
+// GetTracking godoc
+// @Summary      Ambil info tracking pengiriman
+// @Tags         orders
+// @Produce      json
+// @Param        id  path  string  true  "Order ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /orders/{id}/tracking [get]
+func GetTracking(c *gin.Context) {
+	id := c.Param("id")
+	order, ok := services.GetOrderByID(id)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order tidak ditemukan"})
+		return
+	}
+
+	trackingInfo := models.TrackingInfo{
+		OrderID:        order.ID,
+		TrackingNumber: order.TrackingNumber,
+		CourierService: order.CourierService,
+		ShippingStatus: order.ShippingStatus,
+	}
+
+	// Ambil data real dari kurir jika ada resi
+	if order.TrackingNumber != "" {
+		courierData, err := services.GetTrackingInfo(order.CourierService, order.TrackingNumber)
+		if err != nil {
+			log.Printf("[GetTracking] courier API error: %v", err)
+		} else {
+			trackingInfo.CourierData = courierData
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": trackingInfo})
+}
+
+// ────────────────────────────────────────────────────────────
+// Admin Handlers
+// ────────────────────────────────────────────────────────────
+
+// AdminGetOrders godoc
+// @Summary      [Admin] Ambil semua order
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/orders [get]
+func AdminGetOrders(c *gin.Context) {
+	orders := services.GetAllOrders()
+	c.JSON(http.StatusOK, gin.H{"data": orders, "total": len(orders)})
+}
+
+// AdminUpdateOrder godoc
+// @Summary      [Admin] Update status order & info pengiriman
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id    path  string                          true  "Order ID"
+// @Param        body  body  models.UpdateOrderStatusRequest true  "Request body"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /admin/orders/{id} [put]
+func AdminUpdateOrder(c *gin.Context) {
+	id := c.Param("id")
+	var req models.UpdateOrderStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := services.UpdateOrderShipping(id, req); err != nil {
+		log.Printf("[AdminUpdateOrder] error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Order berhasil diupdate"})
+}
+
+// AdminGetFlowers godoc
+// @Summary      [Admin] Ambil semua bunga
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/flowers [get]
+func AdminGetFlowers(c *gin.Context) {
+	flowers := services.GetAllFlowers()
+	c.JSON(http.StatusOK, gin.H{"data": flowers})
+}
+
+// AdminUpdateFlower godoc
+// @Summary      [Admin] Update data bunga (harga, stok, gambar, ketersediaan)
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id    path  string                     true  "Flower ID"
+// @Param        body  body  models.UpdateFlowerRequest true  "Request body"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /admin/flowers/{id} [put]
+func AdminUpdateFlower(c *gin.Context) {
+	id := c.Param("id")
+	var req models.UpdateFlowerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if req.Price != nil {
+		updates["price"] = *req.Price
+	}
+	if req.IsAvailable != nil {
+		updates["is_available"] = *req.IsAvailable
+	}
+	if req.Stock != nil {
+		updates["stock"] = *req.Stock
+	}
+	if req.ImageURL != nil {
+		updates["image_url"] = *req.ImageURL
+	}
+	if req.Emoji != nil {
+		updates["emoji"] = *req.Emoji
+	}
+
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Tidak ada field yang diupdate"})
+		return
+	}
+
+	result := database.DB.Model(&models.FlowerDB{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bunga tidak ditemukan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Bunga berhasil diupdate"})
+}
+
+// AdminGetCatalog godoc
+// @Summary      [Admin] Ambil semua katalog (termasuk yg tidak aktif)
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/catalog [get]
+func AdminGetCatalog(c *gin.Context) {
+	catalogs := services.GetAllCatalogAdmin()
+	c.JSON(http.StatusOK, gin.H{"data": catalogs})
+}
+
+// AdminCreateCatalog godoc
+// @Summary      [Admin] Tambah item katalog baru
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  models.CreateCatalogRequest  true  "Request body"
+// @Success      201   {object}  map[string]interface{}
+// @Router       /admin/catalog [post]
+func AdminCreateCatalog(c *gin.Context) {
+	var req models.CreateCatalogRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	record := models.CatalogBouquetDB{
+		ID:          req.ID,
+		Name:        req.Name,
+		Description: req.Description,
+		ImageURL:    req.ImageURL,
+		Style:       req.Style,
+		Occasion:    req.Occasion,
+		Price:       req.Price,
+		StemCount:   req.StemCount,
+		IsAvailable: req.IsAvailable,
+		Stock:       req.Stock,
+		SortOrder:   req.SortOrder,
+	}
+
+	if err := database.DB.Create(&record).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": record})
+}
+
+// AdminUpdateCatalog godoc
+// @Summary      [Admin] Update item katalog
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id    path  string  true  "Catalog ID"
+// @Param        body  body  models.CreateCatalogRequest  true  "Request body"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /admin/catalog/{id} [put]
+func AdminUpdateCatalog(c *gin.Context) {
+	id := c.Param("id")
+	var req models.CreateCatalogRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updates := map[string]interface{}{
+		"name":         req.Name,
+		"description":  req.Description,
+		"image_url":    req.ImageURL,
+		"style":        req.Style,
+		"occasion":     req.Occasion,
+		"price":        req.Price,
+		"stem_count":   req.StemCount,
+		"is_available": req.IsAvailable,
+		"stock":        req.Stock,
+		"sort_order":   req.SortOrder,
+	}
+
+	result := database.DB.Model(&models.CatalogBouquetDB{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Katalog berhasil diupdate"})
+}
+
+// AdminDeleteCatalog godoc
+// @Summary      [Admin] Hapus item katalog
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id  path  string  true  "Catalog ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/catalog/{id} [delete]
+func AdminDeleteCatalog(c *gin.Context) {
+	id := c.Param("id")
+	if err := database.DB.Delete(&models.CatalogBouquetDB{}, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Katalog berhasil dihapus"})
+}
+
+// AdminGetStats godoc
+// @Summary      [Admin] Statistik dashboard
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/stats [get]
+func AdminGetStats(c *gin.Context) {
+	var totalOrders, paidOrders, pendingOrders int64
+	var totalRevenue struct{ Sum int64 }
+
+	database.DB.Model(&models.OrderDB{}).Count(&totalOrders)
+	database.DB.Model(&models.OrderDB{}).Where("status = 'paid'").Count(&paidOrders)
+	database.DB.Model(&models.OrderDB{}).Where("status = 'pending'").Count(&pendingOrders)
+	database.DB.Model(&models.OrderDB{}).Where("status = 'paid'").
+		Select("COALESCE(SUM(total_amount), 0) as sum").Scan(&totalRevenue)
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_orders":   totalOrders,
+		"paid_orders":    paidOrders,
+		"pending_orders": pendingOrders,
+		"total_revenue":  totalRevenue.Sum,
+	})
+}
+
+// AdminMiddleware — simple API key check untuk endpoint admin
+func AdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := c.GetHeader("X-Admin-Key")
+		adminKey := "admin-bouquet-2024" // ganti dengan env variable di production
+		if key != adminKey {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

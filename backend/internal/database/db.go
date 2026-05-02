@@ -24,9 +24,11 @@ func Connect() {
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
+	
 	if err != nil {
 		log.Fatalf("❌ Gagal konek ke database: %v", err)
 	}
+
 
 	// Auto-migrate semua tabel
 	if err := db.AutoMigrate(

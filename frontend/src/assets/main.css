@@ -237,18 +237,7 @@ img { max-width: 100%; display: block; }
 }
 .flower-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
 .flower-card.selected { border-color: var(--deep-rose); }
-.flower-card.recommended::after {
-  content: '★ Recommended';
-  position: absolute;
-  top: 10px; right: 10px;
-  background: var(--gold);
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.05em;
-}
+/* Badge "Recommended" hanya di FlowerCard.vue via .rec-badge — hapus ::after agar tidak double */
 
 /* Quantity control */
 .qty-control {

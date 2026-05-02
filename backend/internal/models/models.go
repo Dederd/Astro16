@@ -222,6 +222,8 @@ type OrderDB struct {
 	// Source: ai_generated or catalog
 	OrderSource   string `gorm:"type:varchar(30);default:'ai_generated'" json:"order_source"`
 	CatalogItemID string `gorm:"type:varchar(50)" json:"catalog_item_id"`
+	// Auth: link to user account (nullable)
+	UserID *uint `gorm:"index" json:"user_id,omitempty"`
 	// Generate count for rate limiting
 	GenerateCount int `gorm:"default:0" json:"generate_count"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -375,4 +377,42 @@ type TrackingInfo struct {
 	ShippingStatus string `json:"shipping_status"`
 	// From external courier API
 	CourierData interface{} `json:"courier_data,omitempty"`
+}
+
+// ────────────────────────────────────────────────────────────
+// User (Auth)
+// ────────────────────────────────────────────────────────────
+
+type UserDB struct {
+	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name         string    `gorm:"type:varchar(255);not null" json:"name"`
+	Email        string    `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	Phone        string    `gorm:"type:varchar(30)" json:"phone"`
+	PasswordHash string    `gorm:"type:varchar(255);not null" json:"-"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (UserDB) TableName() string { return "users" }
+
+type RegisterRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+	Phone    string `json:"phone"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type AuthResponse struct {
+	Token string `json:"token"`
+	User  struct {
+		ID    uint   `json:"id"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Phone string `json:"phone"`
+	} `json:"user"`
 }

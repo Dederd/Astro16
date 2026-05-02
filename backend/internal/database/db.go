@@ -32,6 +32,7 @@ func Connect() {
 
 	// Auto-migrate semua tabel
 	if err := db.AutoMigrate(
+		&models.UserDB{},
 		&models.OrderDB{},
 		&models.FlowerDB{},
 		&models.CatalogBouquetDB{},

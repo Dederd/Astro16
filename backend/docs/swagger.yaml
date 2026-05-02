@@ -99,12 +99,38 @@ definitions:
           AI output
         type: integer
     type: object
+  models.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
   models.PaymentTokenRequest:
     properties:
       order_id:
         type: string
     required:
     - order_id
+    type: object
+  models.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phone:
+        type: string
+    required:
+    - email
+    - name
+    - password
     type: object
   models.SelectedFlower:
     properties:
@@ -414,6 +440,65 @@ paths:
       summary: 'Agent 1: Verifikasi pilihan momen & rekomendasikan bunga'
       tags:
       - agent
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login user
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Ambil data user yang sedang login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register user baru
+      tags:
+      - auth
   /bouquet-types:
     get:
       produces:
@@ -555,6 +640,21 @@ paths:
       summary: Buat token pembayaran Midtrans Snap
       tags:
       - payment
+  /user/orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Ambil semua order milik user yang login
+      tags:
+      - user
 securityDefinitions:
   ApiKeyAuth:
     in: header

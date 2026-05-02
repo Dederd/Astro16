@@ -48,6 +48,11 @@ func main() {
 	// ── Public API ──────────────────────────────────────────
 	api := r.Group("/api/v1")
 	{
+		// Auth
+		api.POST("/auth/register", handlers.Register)
+		api.POST("/auth/login", handlers.Login)
+		api.GET("/auth/me", handlers.AuthMiddleware(), handlers.GetMe)
+
 		// Bouquet types
 		api.GET("/bouquet-types", handlers.GetBouquetTypes)
 
@@ -62,14 +67,21 @@ func main() {
 		api.POST("/agent/generate-bouquet", handlers.AgentGenerateBouquet)
 		api.GET("/agent/generate-status", handlers.GetGenerateStatus)
 
-		// Orders
-		api.POST("/orders", handlers.CreateOrder)
+		// Orders — optional auth (link ke user jika login)
+		api.POST("/orders", handlers.OptionalAuthMiddleware(), handlers.CreateOrder)
 		api.GET("/orders/:id", handlers.GetOrder)
 		api.GET("/orders/:id/tracking", handlers.GetTracking)
 
 		// Payment
 		api.POST("/payment/token", handlers.CreatePaymentToken)
 		api.POST("/payment/notification", handlers.PaymentNotification)
+	}
+
+	// ── User API (requires auth) ─────────────────────────────
+	userApi := r.Group("/api/v1/user")
+	userApi.Use(handlers.AuthMiddleware())
+	{
+		userApi.GET("/orders", handlers.GetUserOrders)
 	}
 
 	// ── Admin API (protected) ────────────────────────────────

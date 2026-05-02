@@ -5,6 +5,12 @@
       <p>Lengkapi data pemesan, alamat pengiriman, dan lakukan pembayaran</p>
     </div>
 
+    <!-- Login notice -->
+    <div v-if="!authStore.isLoggedIn" class="login-notice">
+      <span>🔒 Kamu perlu <strong>masuk</strong> atau <strong>daftar</strong> untuk menyelesaikan pembelian — pesananmu akan tersimpan di akunmu.</span>
+      <button class="btn btn-primary btn-sm" @click="openAuth && openAuth('login')">Masuk / Daftar</button>
+    </div>
+
     <div class="checkout-layout">
       <!-- Left: Form -->
       <div class="checkout-form-col">
@@ -153,13 +159,16 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, inject } from 'vue'
 import { useOrderStore } from '@/stores/order'
+import { useAuthStore } from '@/stores/auth'
 import { createOrder, createPaymentToken } from '@/services/api'
 import { useRouter } from 'vue-router'
 
 const store = useOrderStore()
+const authStore = useAuthStore()
 const router = useRouter()
+const openAuth = inject('openAuth', null)
 
 const form = reactive({
   customer_name: '',
@@ -220,6 +229,12 @@ const isFormValid = computed(() =>
 )
 
 async function handlePayment() {
+  // Wajib login sebelum checkout
+  if (!authStore.isLoggedIn) {
+    if (openAuth) openAuth('login')
+    return
+  }
+
   if (!isFormValid.value) {
     error.value = 'Lengkapi semua field yang wajib diisi (*).'
     return
@@ -319,6 +334,23 @@ function emojiFor(style) {
 .step-header { text-align: center; margin-bottom: 40px; }
 .step-header h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 10px; }
 .step-header p { color: var(--warm-gray); }
+
+.login-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #FFF8F0, #FFF0E8);
+  border: 1.5px solid var(--blush);
+  border-radius: var(--radius-sm);
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  font-size: 0.88rem;
+  color: var(--warm-gray);
+  flex-wrap: wrap;
+}
+
+.btn-sm { padding: 8px 18px; font-size: 0.82rem; }
 
 .checkout-layout {
   display: grid;

@@ -26,6 +26,16 @@ api.interceptors.response.use(
   }
 )
 
+export default api
+
+// Auth
+export const authRegister = (data) => api.post('/auth/register', data)
+export const authLogin = (data) => api.post('/auth/login', data)
+export const authMe = () => api.get('/auth/me')
+
+// User orders
+export const getUserOrders = () => api.get('/user/orders')
+
 // Bouquet types
 export const getBouquetTypes = () => api.get('/bouquet-types')
 
@@ -73,3 +83,4 @@ export const adminGetCatalog = () => adminApi.get('/admin/catalog')
 export const adminCreateCatalog = (data) => adminApi.post('/admin/catalog', data)
 export const adminUpdateCatalog = (id, data) => adminApi.put(`/admin/catalog/${id}`, data)
 export const adminDeleteCatalog = (id) => adminApi.delete(`/admin/catalog/${id}`)
+

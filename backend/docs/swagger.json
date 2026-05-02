@@ -10,7 +10,7 @@
         },
         "version": "2.0"
     },
-    "host": "astro16-production.up.railway.app/",
+    "host": "astro16-production.up.railway.app",
     "basePath": "/api/v1",
     "paths": {
         "/admin/catalog": {

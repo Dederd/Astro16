@@ -1,0 +1,563 @@
+basePath: /api/v1
+definitions:
+  models.AgentVerifyRequest:
+    properties:
+      bouquet_type:
+        type: string
+      bouquet_type_id:
+        type: string
+    type: object
+  models.CreateCatalogRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      image_url:
+        type: string
+      is_available:
+        type: boolean
+      name:
+        type: string
+      occasion:
+        type: string
+      price:
+        type: integer
+      sort_order:
+        type: integer
+      stem_count:
+        type: integer
+      stock:
+        type: integer
+      style:
+        type: string
+    required:
+    - id
+    - name
+    - price
+    type: object
+  models.CreateOrderRequest:
+    properties:
+      bouquet_type_id:
+        type: string
+      catalog_item_id:
+        type: string
+      courier_service:
+        type: string
+      customer_email:
+        type: string
+      customer_name:
+        type: string
+      customer_phone:
+        type: string
+      design_id:
+        type: string
+      design_name:
+        type: string
+      notes:
+        type: string
+      order_source:
+        description: ai_generated | catalog
+        type: string
+      selected_flowers:
+        items:
+          $ref: '#/definitions/models.SelectedFlower'
+        type: array
+      shipping_address:
+        type: string
+      shipping_city:
+        type: string
+      shipping_phone:
+        type: string
+      shipping_postcode:
+        type: string
+      size:
+        type: string
+      total_amount:
+        type: integer
+    required:
+    - courier_service
+    - customer_email
+    - customer_name
+    - customer_phone
+    - shipping_address
+    - shipping_city
+    - shipping_phone
+    - shipping_postcode
+    - total_amount
+    type: object
+  models.GenerateBouquetRequest:
+    properties:
+      bouquet_type_id:
+        type: string
+      selected_flowers:
+        items:
+          $ref: '#/definitions/models.SelectedFlower'
+        type: array
+      total_stem_count:
+        description: Total stem count from user's actual selection — used to sync
+          AI output
+        type: integer
+    type: object
+  models.PaymentTokenRequest:
+    properties:
+      order_id:
+        type: string
+    required:
+    - order_id
+    type: object
+  models.SelectedFlower:
+    properties:
+      flower_id:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  models.UpdateFlowerRequest:
+    properties:
+      emoji:
+        type: string
+      image_url:
+        type: string
+      is_available:
+        type: boolean
+      price:
+        type: integer
+      stock:
+        type: integer
+    type: object
+  models.UpdateOrderStatusRequest:
+    properties:
+      courier_service:
+        type: string
+      shipping_status:
+        type: string
+      status:
+        type: string
+      tracking_number:
+        type: string
+    required:
+    - status
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@bouquet-app.id
+    name: Bouquet App Support
+  description: API untuk aplikasi pemesanan bouquet bunga dengan AI design generator
+  termsOfService: http://swagger.io/terms/
+  title: Bouquet App API
+  version: "2.0"
+paths:
+  /admin/catalog:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Ambil semua katalog (termasuk yg tidak aktif)'
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCatalogRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Tambah item katalog baru'
+      tags:
+      - admin
+  /admin/catalog/{id}:
+    delete:
+      parameters:
+      - description: Catalog ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Hapus item katalog'
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Catalog ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCatalogRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Update item katalog'
+      tags:
+      - admin
+  /admin/flowers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Ambil semua bunga'
+      tags:
+      - admin
+  /admin/flowers/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Flower ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateFlowerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Update data bunga (harga, stok, gambar, ketersediaan)'
+      tags:
+      - admin
+  /admin/orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Ambil semua order'
+      tags:
+      - admin
+  /admin/orders/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Update status order & info pengiriman'
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: '[Admin] Statistik dashboard'
+      tags:
+      - admin
+  /agent/generate-bouquet:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Session ID untuk rate limiting
+        in: header
+        name: X-Session-ID
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.GenerateBouquetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Batas generate tercapai
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 'Agent 2: Generate desain bouquet berdasarkan bunga pilihan'
+      tags:
+      - agent
+  /agent/generate-status:
+    get:
+      parameters:
+      - description: Session ID
+        in: header
+        name: X-Session-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Cek status generate session (sisa kuota)
+      tags:
+      - agent
+  /agent/verify-selection:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AgentVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 'Agent 1: Verifikasi pilihan momen & rekomendasikan bunga'
+      tags:
+      - agent
+  /bouquet-types:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ambil semua tipe bouquet
+      tags:
+      - bouquet
+  /catalog:
+    get:
+      parameters:
+      - description: Filter by occasion
+        in: query
+        name: occasion
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ambil katalog bouquet pre-made
+      tags:
+      - catalog
+  /flowers:
+    get:
+      parameters:
+      - description: Filter by occasion ID
+        in: query
+        name: occasion
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ambil semua bunga dari database
+      tags:
+      - flowers
+  /orders:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Buat order baru
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ambil detail order berdasarkan ID
+      tags:
+      - orders
+  /orders/{id}/tracking:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ambil info tracking pengiriman
+      tags:
+      - orders
+  /payment/notification:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      summary: Webhook notifikasi pembayaran dari Midtrans
+      tags:
+      - payment
+  /payment/token:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PaymentTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Buat token pembayaran Midtrans Snap
+      tags:
+      - payment
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-Admin-Key
+    type: apiKey
+swagger: "2.0"

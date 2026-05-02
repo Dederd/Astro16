@@ -141,7 +141,7 @@ definitions:
     required:
     - status
     type: object
-host: https://astro16-production.up.railway.app/
+host: astro16-production.up.railway.app/
 info:
   contact:
     email: support@bouquet-app.id

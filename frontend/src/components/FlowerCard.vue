@@ -1,0 +1,279 @@
+<template>
+  <div
+    class="flower-card"
+    :class="{
+      selected: isSelected,
+      recommended: isRecommended,
+      unavailable: !flower.is_available
+    }"
+    @click="flower.is_available && $emit('toggle', flower)"
+  >
+    <!-- Recommended badge -->
+    <div v-if="isRecommended" class="rec-badge">★ Recommended</div>
+
+    <!-- Image area -->
+    <div class="flower-img-wrap">
+      <img
+        v-if="flower.image_url"
+        :src="flower.image_url"
+        :alt="flower.name_id"
+        class="flower-img"
+        @error="imgError = true"
+      />
+      <div v-if="!flower.image_url || imgError" class="flower-emoji-placeholder">
+        {{ flower.emoji || flowerEmoji }}
+      </div>
+      <div v-if="!flower.is_available" class="unavailable-overlay">
+        <span>Stok Habis</span>
+      </div>
+      <div v-if="isSelected" class="selected-check">✓</div>
+    </div>
+
+    <!-- Info -->
+    <div class="flower-info">
+      <div class="flower-header">
+        <span class="flower-name">{{ flower.name_id }}</span>
+        <span class="badge" :class="flower.is_available ? 'badge-available' : 'badge-unavailable'">
+          {{ flower.is_available ? 'Ready' : 'Habis' }}
+        </span>
+      </div>
+      <p class="flower-meaning">{{ flower.meaning }}</p>
+      <div class="flower-price">Rp{{ formatPrice(flower.price) }}/tangkai</div>
+
+      <!-- Colors -->
+      <div class="flower-colors">
+        <span
+          v-for="color in flower.colors"
+          :key="color"
+          class="color-dot"
+          :style="`background: ${color}; border: 1.5px solid ${color === '#FAFAFA' || color === '#FFFFFF' ? '#ddd' : color}`"
+        ></span>
+      </div>
+
+      <!-- BUG FIX #1: Qty control di dalam card info, bukan di atas popup -->
+      <!-- Gunakan @click.stop supaya tidak trigger card toggle -->
+      <div v-if="isSelected && flower.is_available" class="qty-control" @click.stop>
+        <button class="qty-btn" @click.stop="updateQty(-1)">−</button>
+        <span class="qty-value">{{ quantity }}</span>
+        <button class="qty-btn" @click.stop="updateQty(1)">+</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+const props = defineProps({
+  flower: { type: Object, required: true },
+  isSelected: { type: Boolean, default: false },
+  isRecommended: { type: Boolean, default: false },
+  quantity: { type: Number, default: 1 }
+})
+
+const emit = defineEmits(['toggle', 'update-qty'])
+const imgError = ref(false)
+
+const flowerEmoji = computed(() => {
+  const map = {
+    rose_red: '🌹', rose_pink: '🌸', rose_white: '🤍',
+    tulip_yellow: '🌷', tulip_purple: '💜',
+    sunflower: '🌻', lily_white: '🌼',
+    chrysanthemum: '💮', baby_breath: '🌬️',
+    carnation_red: '🌺', carnation_pink: '🌸',
+    orchid_purple: '🌸', lavender: '💜',
+    daisy: '🌼', peony: '🌹'
+  }
+  return map[props.flower.id] || '🌸'
+})
+
+function formatPrice(p) {
+  return p.toLocaleString('id-ID')
+}
+
+function updateQty(delta) {
+  emit('update-qty', props.flower.id, props.quantity + delta)
+}
+</script>
+
+<style scoped>
+.flower-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--light-gray);
+  overflow: visible; /* penting: jangan hidden supaya qty control terlihat */
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  user-select: none;
+}
+
+.flower-card:hover:not(.unavailable) {
+  border-color: var(--rose);
+  box-shadow: 0 4px 20px rgba(198, 40, 40, 0.1);
+  transform: translateY(-2px);
+}
+
+.flower-card.selected {
+  border-color: var(--deep-rose);
+  box-shadow: 0 4px 20px rgba(139, 0, 0, 0.15);
+}
+
+.flower-card.recommended {
+  border-color: var(--gold);
+}
+
+.rec-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gold);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.flower-img-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--cream) 0%, var(--blush) 100%);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.flower-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.flower-emoji-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+}
+
+.unavailable-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(44,44,44,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unavailable-overlay span {
+  background: rgba(255,255,255,0.9);
+  color: var(--charcoal);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.selected-check {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 28px; height: 28px;
+  background: var(--deep-rose);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.unavailable { opacity: 0.7; cursor: not-allowed; }
+
+.flower-info { padding: 14px; }
+
+.flower-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.flower-name { font-weight: 500; font-size: 0.9rem; color: var(--charcoal); }
+
+.flower-meaning {
+  font-size: 0.78rem;
+  color: var(--warm-gray);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.flower-price {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--deep-rose);
+  margin-bottom: 8px;
+}
+
+.flower-colors {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.color-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* BUG FIX #1: Qty control styling — tidak dipengaruhi z-index popup */
+.qty-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: var(--cream);
+  border: 1px solid var(--blush);
+  border-radius: var(--radius-pill);
+}
+
+.qty-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rose);
+  background: var(--white);
+  color: var(--deep-rose);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.qty-btn:hover {
+  background: var(--deep-rose);
+  color: white;
+}
+
+.qty-value {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--charcoal);
+  min-width: 24px;
+  text-align: center;
+}
+</style>

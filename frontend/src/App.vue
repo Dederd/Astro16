@@ -228,4 +228,25 @@ main.main-admin { padding: 0; }
 .page-enter-active, .page-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
 .page-enter-from { opacity: 0; transform: translateY(12px); }
 .page-leave-to { opacity: 0; transform: translateY(-8px); }
+
+/* ── Mobile navbar responsive ── */
+@media (max-width: 640px) {
+  .navbar-inner { height: 52px; }
+  .logo-text { font-size: 1.3rem; }
+
+  .nav-links { gap: 8px; }
+  .nav-link { display: none; } /* hide text links on mobile */
+
+  .btn-nav {
+    padding: 8px 14px;
+    font-size: 0.78rem;
+  }
+
+  .user-name { display: none; }
+  .user-btn { padding: 5px 10px 5px 5px; }
+
+  main { padding: 0 0px; min-height: calc(100vh - 52px - 80px); }
+  .footer { margin-top: 40px; padding: 28px 0; }
+}
+
 </style>

@@ -102,6 +102,8 @@ func main() {
 		// Catalog management
 		admin.GET("/catalog", handlers.AdminGetCatalog)
 		admin.POST("/catalog", handlers.AdminCreateCatalog)
+		admin.POST("/flowers", handlers.AdminCreateFlower)
+		admin.DELETE("/flowers/:id", handlers.AdminDeleteFlower)
 		admin.PUT("/catalog/:id", handlers.AdminUpdateCatalog)
 		admin.DELETE("/catalog/:id", handlers.AdminDeleteCatalog)
 	}

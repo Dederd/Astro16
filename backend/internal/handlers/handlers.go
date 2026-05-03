@@ -532,6 +532,47 @@ func AdminUpdateFlower(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Bunga berhasil diupdate"})
 }
 
+// AdminCreateFlower godoc
+// @Summary      [Admin] Tambah bunga baru
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Success      201  {object}  map[string]interface{}
+// @Router       /admin/flowers [post]
+func AdminCreateFlower(c *gin.Context) {
+	var flower models.FlowerDB
+	if err := c.ShouldBindJSON(&flower); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if flower.ID == "" || flower.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID dan Nama wajib diisi"})
+		return
+	}
+	if err := database.DB.Create(&flower).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Bunga berhasil ditambahkan", "data": flower})
+}
+
+// AdminDeleteFlower godoc
+// @Summary      [Admin] Hapus bunga
+// @Tags         admin
+// @Security     ApiKeyAuth
+// @Param        id  path  string  true  "Flower ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/flowers/{id} [delete]
+func AdminDeleteFlower(c *gin.Context) {
+	id := c.Param("id")
+	if err := database.DB.Delete(&models.FlowerDB{}, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Bunga berhasil dihapus"})
+}
+
 // AdminGetCatalog godoc
 // @Summary      [Admin] Ambil semua katalog (termasuk yg tidak aktif)
 // @Tags         admin

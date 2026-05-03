@@ -134,10 +134,62 @@
 
       <!-- Flowers tab -->
       <div v-if="activeTab === 'flowers'">
-        <h1 class="admin-title">Manajemen Bunga</h1>
+        <div class="section-header-main">
+          <h1 class="admin-title">Manajemen Bunga</h1>
+          <button class="btn btn-primary btn-sm" @click="showFlowerForm = true">+ Tambah Bunga</button>
+        </div>
+
+        <!-- Add flower form -->
+        <div v-if="showFlowerForm" class="catalog-form-card card">
+          <h3>Tambah Bunga Baru</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">ID (unik, contoh: rose_red)</label>
+              <input v-model="flowerForm.id" class="form-input" placeholder="flower_id_unik" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama (EN)</label>
+              <input v-model="flowerForm.name" class="form-input" placeholder="Rose" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama (ID)</label>
+              <input v-model="flowerForm.name_id" class="form-input" placeholder="Mawar" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emoji</label>
+              <input v-model="flowerForm.emoji" class="form-input" placeholder="🌹" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Harga (Rp)</label>
+              <input v-model.number="flowerForm.price" type="number" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok</label>
+              <input v-model.number="flowerForm.stock" type="number" class="form-input" />
+            </div>
+            <div class="form-group" style="grid-column: span 2">
+              <label class="form-label">Deskripsi</label>
+              <textarea v-model="flowerForm.description" class="form-input" rows="2" style="resize:vertical;"></textarea>
+            </div>
+            <div class="form-group" style="grid-column: span 2">
+              <label class="form-label">URL Gambar</label>
+              <input v-model="flowerForm.image_url" class="form-input" placeholder="https://..." />
+            </div>
+            <div class="form-group" style="grid-column: span 2">
+              <label class="form-label">Makna</label>
+              <input v-model="flowerForm.meaning" class="form-input" placeholder="Cinta, keindahan..." />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-ghost btn-sm" @click="cancelFlowerForm">Batal</button>
+            <button class="btn btn-primary btn-sm" @click="saveFlower">Simpan</button>
+          </div>
+        </div>
+
         <div class="section-card">
           <div v-if="flowersLoading" class="loading-center">Memuat bunga...</div>
           <div v-else>
+            <div class="table-scroll">
             <table class="admin-table">
               <thead><tr>
                 <th>ID</th><th>Nama</th><th>Harga</th><th>Stok</th><th>Status</th><th>Gambar URL</th><th>Aksi</th>
@@ -185,11 +237,15 @@
                     />
                   </td>
                   <td>
-                    <span class="saved-indicator" v-if="savedFlowers[flower.id]">✓</span>
+                    <div class="action-cell">
+                      <span class="saved-indicator" v-if="savedFlowers[flower.id]">✓</span>
+                      <button class="btn-icon danger" @click="deleteFlower(flower.id)" title="Hapus">🗑️</button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>
@@ -323,7 +379,7 @@
 import { ref, onMounted } from 'vue'
 import {
   adminGetStats, adminGetOrders, adminUpdateOrder,
-  adminGetFlowers, adminUpdateFlower,
+  adminGetFlowers, adminCreateFlower, adminUpdateFlower, adminDeleteFlower,
   adminGetCatalog, adminCreateCatalog, adminUpdateCatalog, adminDeleteCatalog
 } from '@/services/api'
 
@@ -348,6 +404,12 @@ const selectedOrder = ref(null)
 const adminFlowers = ref([])
 const flowersLoading = ref(true)
 const savedFlowers = ref({})
+const showFlowerForm = ref(false)
+const flowerForm = ref(defaultFlowerForm())
+
+function defaultFlowerForm() {
+  return { id: '', name: '', name_id: '', emoji: '🌸', price: 10000, stock: 100, description: '', image_url: '', meaning: '', is_available: true }
+}
 
 // Catalog
 const adminCatalog = ref([])
@@ -436,6 +498,25 @@ async function updateFlowerField(flower, field, value) {
 
 async function toggleFlowerAvailability(flower) {
   await updateFlowerField(flower, 'is_available', !flower.is_available)
+}
+
+function cancelFlowerForm() {
+  showFlowerForm.value = false
+  flowerForm.value = defaultFlowerForm()
+}
+
+async function saveFlower() {
+  try {
+    await adminCreateFlower(flowerForm.value)
+    await loadFlowers()
+    cancelFlowerForm()
+  } catch (e) { alert('Gagal tambah bunga: ' + (e?.response?.data?.error || e.message)) }
+}
+
+async function deleteFlower(id) {
+  if (!confirm('Yakin hapus bunga ini?')) return
+  try { await adminDeleteFlower(id); await loadFlowers() }
+  catch (e) { alert('Gagal hapus bunga: ' + (e?.response?.data?.error || e.message)) }
 }
 
 function editCatalog(item) {
@@ -613,4 +694,84 @@ function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
 
 .empty-inline { color: var(--warm-gray); font-size: 0.88rem; text-align: center; padding: 32px; }
 .loading-center { text-align: center; padding: 32px; color: var(--warm-gray); font-size: 0.9rem; }
+
+/* Table scroll wrapper for mobile */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  .admin-page { flex-direction: column; }
+
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 12px 0 8px;
+    flex-direction: column;
+  }
+
+  .sidebar-brand {
+    padding: 0 16px 10px;
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0 8px;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .sidebar-nav::-webkit-scrollbar { display: none; }
+
+  .nav-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+  .nav-icon { font-size: 1.2rem; }
+
+  .admin-main {
+    padding: 16px;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .admin-title { font-size: 1.2rem; margin-bottom: 16px; }
+
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px; gap: 10px; }
+  .stat-value { font-size: 1.2rem; }
+  .stat-label { font-size: 0.7rem; }
+
+  .section-header-main { flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+
+  .form-grid { grid-template-columns: 1fr !important; }
+  .form-group[style*="span 2"] { grid-column: span 1 !important; }
+
+  .admin-table th, .admin-table td { padding: 8px 10px; font-size: 0.78rem; }
+  .url-input { width: 120px; }
+  .resi-input { width: 100px; }
+
+  .detail-grid { grid-template-columns: 1fr !important; }
+  .detail-item.full { grid-column: span 1 !important; }
+
+  .modal-card { max-width: 100%; margin: 8px; }
+  .modal-body { padding: 16px; }
+  .modal-header { padding: 16px; }
+
+  .catalog-form-card { padding: 16px; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .admin-main { padding: 12px; }
+}
 </style>

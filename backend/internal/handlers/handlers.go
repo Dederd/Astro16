@@ -154,15 +154,18 @@ func AgentGenerateBouquet(c *gin.Context) {
 	session, err := services.GetOrCreateSession(sessionID)
 	if err != nil {
 		log.Printf("[AgentGenerateBouquet] session error: %v", err)
-	} else if session.GenerateCount >= maxFree && !session.IsPaid {
-		c.JSON(http.StatusTooManyRequests, gin.H{
-			"error":          "Batas generate gratis tercapai (2x). Bayar Rp5.000 untuk 1x generate tambahan.",
-			"generate_count": session.GenerateCount,
-			"limit":          maxFree,
-			"is_limited":     true,
-			"ai_fee":         aiFeePerGenerate,
-		})
-		return
+	} else {
+		effectiveLimit := maxFree + session.ExtraQuota
+		if session.GenerateCount >= effectiveLimit {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":          "Kuota generate habis. Beli 3 kuota tambahan seharga Rp5.000.",
+				"generate_count": session.GenerateCount,
+				"limit":          effectiveLimit,
+				"is_limited":     true,
+				"ai_fee":         aiFeePerGenerate,
+			})
+			return
+		}
 	}
 
 	// Hitung total stem count
@@ -183,6 +186,11 @@ func AgentGenerateBouquet(c *gin.Context) {
 		services.IncrementGenerateCount(sessionID)
 	}
 
+	effectiveLimit := maxFree
+	if session != nil {
+		effectiveLimit = maxFree + session.ExtraQuota
+	}
+
 	// Apakah generate ini berbayar (di atas free tier)?
 	isThisPaid := session != nil && session.GenerateCount >= maxFree
 	aiFee := int64(0)
@@ -191,11 +199,43 @@ func AgentGenerateBouquet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":           result,
-		"generate_count": session.GenerateCount + 1,
-		"limit":          maxFree,
-		"ai_fee":         aiFee,
+		"data":             result,
+		"generate_count":   session.GenerateCount + 1,
+		"limit":            effectiveLimit,
+		"ai_fee":           aiFee,
 		"is_paid_generate": isThisPaid,
+	})
+}
+
+// BuyGenerateQuota godoc
+// @Summary      Beli 3 kuota generate tambahan (Rp5.000)
+// @Tags         agent
+// @Produce      json
+// @Router       /agent/buy-quota [post]
+func BuyGenerateQuota(c *gin.Context) {
+	sessionID := c.GetHeader("X-Session-ID")
+	if userID, exists := c.Get("user_id"); exists {
+		if uid, ok := userID.(uint); ok && uid > 0 {
+			sessionID = fmt.Sprintf("user_%d", uid)
+		}
+	}
+	if sessionID == "" {
+		sessionID = c.ClientIP()
+	}
+
+	session, err := services.BuyExtraQuota(sessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membeli kuota: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":          "Berhasil membeli 3 kuota generate",
+		"generate_count":   session.GenerateCount,
+		"limit":            2 + session.ExtraQuota,
+		"extra_quota":      session.ExtraQuota,
+		"extra_quota_fee":  session.ExtraQuotaFee,
+		"is_limited":       session.GenerateCount >= (2 + session.ExtraQuota),
 	})
 }
 
@@ -223,8 +263,9 @@ func GetGenerateStatus(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"generate_count": session.GenerateCount,
-		"limit":          2,
-		"is_limited":     session.GenerateCount >= 2 && !session.IsPaid,
+		"limit":          2 + session.ExtraQuota,
+		"extra_quota":    session.ExtraQuota,
+		"is_limited":     session.GenerateCount >= (2 + session.ExtraQuota),
 		"is_paid":        session.IsPaid,
 		"ai_fee":         5000,
 	})

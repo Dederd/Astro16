@@ -127,6 +127,32 @@ func IncrementGenerateCount(sessionID string) error {
 		UpdateColumn("generate_count", database.DB.Raw("generate_count + 1")).Error
 }
 
+// BuyExtraQuota — tambah 3 kuota generate, catat biaya Rp5.000
+func BuyExtraQuota(sessionID string) (*models.GenerateSessionDB, error) {
+	const quotaPerPack = 3
+	const feePerPack = int64(5000)
+
+	session, err := GetOrCreateSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = database.DB.Model(&models.GenerateSessionDB{}).
+		Where("session_id = ?", sessionID).
+		Updates(map[string]interface{}{
+			"extra_quota":     session.ExtraQuota + quotaPerPack,
+			"extra_quota_fee": session.ExtraQuotaFee + feePerPack,
+			"is_paid":         true,
+		}).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Reload
+	updated, err := GetOrCreateSession(sessionID)
+	return updated, err
+}
+
 // ────────────────────────────────────────────────────────────
 // Midtrans Snap
 // ────────────────────────────────────────────────────────────

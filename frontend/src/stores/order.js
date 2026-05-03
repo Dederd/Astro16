@@ -21,6 +21,8 @@ export const useOrderStore = defineStore('order', () => {
   const selectedSize = ref(null) // 'small' | 'large'
   const generateCount = ref(0)
   const generateLimit = ref(2)
+  const extraQuota = ref(0)
+  const extraQuotaFee = ref(0)
 
   // Catalog mode
   const orderMode = ref('ai') // 'ai' | 'catalog'
@@ -67,7 +69,7 @@ export const useOrderStore = defineStore('order', () => {
       ? selectedDesign.value.small.price
       : selectedDesign.value.large.price
     const ai = aiFeePaid.value ? AI_FEE : 0
-    return stemPrice + MAKING_FEE + ai + shippingCost.value
+    return stemPrice + MAKING_FEE + ai + extraQuotaFee.value + shippingCost.value
   })
 
   const priceBreakdown = computed(() => {
@@ -89,8 +91,9 @@ export const useOrderStore = defineStore('order', () => {
       flower_cost: stemPrice,
       making_fee: MAKING_FEE,
       ai_fee: ai,
+      extra_quota_fee: extraQuotaFee.value,
       shipping_cost: shippingCost.value,
-      total: stemPrice + MAKING_FEE + ai + shippingCost.value,
+      total: stemPrice + MAKING_FEE + ai + extraQuotaFee.value + shippingCost.value,
     }
   })
 
@@ -101,6 +104,12 @@ export const useOrderStore = defineStore('order', () => {
   const isGenerateLimited = computed(() =>
     generateCount.value >= generateLimit.value
   )
+
+  function setExtraQuota(eq, fee) {
+    extraQuota.value = eq
+    extraQuotaFee.value = fee
+    generateLimit.value = 2 + eq
+  }
 
   // Actions
   function setStep(step) { currentStep.value = step }
@@ -187,18 +196,21 @@ export const useOrderStore = defineStore('order', () => {
     createdOrder.value = null
     aiFeePaid.value = false
     shippingCost.value = 0
+    extraQuota.value = 0
+    extraQuotaFee.value = 0
   }
 
   return {
     currentStep, selectedBouquetType, agentMessage, agentTips,
     recommendedFlowerIds, selectedFlowers, generatedDesigns, designMessage,
     selectedDesign, selectedSize, generateCount, generateLimit,
+    extraQuota, extraQuotaFee,
     orderMode, selectedCatalogItem, createdOrder, totalPrice, flowerCount,
     isGenerateLimited, sessionId, aiFeePaid, shippingCost, priceBreakdown,
     MAKING_FEE, AI_FEE,
     setStep, selectBouquetType, setAgentResponse, toggleFlower,
     updateFlowerQuantity, isFlowerSelected, getFlowerQuantity,
     setGeneratedDesigns, selectDesign, setOrderMode, selectCatalogItem,
-    setCreatedOrder, setAIFeePaid, setShippingCost, reset,
+    setCreatedOrder, setAIFeePaid, setShippingCost, setExtraQuota, reset,
   }
 })

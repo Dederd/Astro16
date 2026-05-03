@@ -381,6 +381,8 @@ type GenerateSessionDB struct {
 	SessionID     string    `gorm:"primaryKey;type:varchar(100)" json:"session_id"`
 	GenerateCount int       `gorm:"default:0" json:"generate_count"`
 	IsPaid        bool      `gorm:"default:false" json:"is_paid"`
+	ExtraQuota    int       `gorm:"default:0" json:"extra_quota"`      // kuota tambahan yang dibeli
+	ExtraQuotaFee int64     `gorm:"default:0" json:"extra_quota_fee"`  // total biaya kuota yang dibeli (Rp)
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

@@ -381,6 +381,18 @@ const docTemplate = `{
                 }
             }
         },
+        "/agent/buy-quota": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "Beli 3 kuota generate tambahan (Rp5.000)",
+                "responses": {}
+            }
+        },
         "/agent/generate-bouquet": {
             "post": {
                 "consumes": [

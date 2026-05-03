@@ -19,12 +19,23 @@
       </div>
     </div>
 
-    <!-- Generate limit warning -->
+    <!-- Generate limit warning + Buy Quota -->
     <div v-if="store.isGenerateLimited && !generated" class="limit-banner">
       <span>🔒</span>
-      <div>
-        <strong>Kuota gratis habis ({{ store.generateCount }}/{{ store.generateLimit }}x)</strong>
-        <p>Generate berikutnya dikenakan biaya <strong>Rp5.000/generate</strong> dan akan ditambahkan ke total pesanan. Atau pilih dari desain yang sudah ada di bawah.</p>
+      <div class="limit-content">
+        <strong>Kuota generate habis ({{ store.generateCount }}/{{ store.generateLimit }}x)</strong>
+        <p>Beli paket kuota tambahan untuk terus merancang bouquet impianmu.</p>
+        <div class="buy-quota-box">
+          <div class="quota-pack-info">
+            <span class="quota-pack-label">✨ Paket 3 Generate</span>
+            <span class="quota-pack-price">Rp5.000</span>
+          </div>
+          <button class="btn btn-primary btn-sm buy-quota-btn" @click="buyQuota" :disabled="buyingQuota">
+            <span v-if="buyingQuota">⏳ Memproses...</span>
+            <span v-else>🛒 Beli Sekarang</span>
+          </button>
+        </div>
+        <p class="quota-note">* Biaya akan ditambahkan ke total pesananmu</p>
       </div>
     </div>
 
@@ -120,13 +131,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useOrderStore } from '@/stores/order'
-import { agentGenerateBouquet, getGenerateStatus } from '@/services/api'
+import { agentGenerateBouquet, getGenerateStatus, buyGenerateQuota } from '@/services/api'
 import DesignCard from '@/components/DesignCard.vue'
 
 const store = useOrderStore()
 const loading = ref(false)
 const generated = ref(false)
 const error = ref('')
+const buyingQuota = ref(false)
 const loadingMsgs = [
   'Menganalisis kombinasi bungamu...',
   'Menciptakan palet warna yang harmonis...',
@@ -146,12 +158,36 @@ onMounted(async () => {
       res.data.generate_count,
       res.data.limit,
     )
+    if (res.data.extra_quota !== undefined) {
+      store.setExtraQuota(res.data.extra_quota, 0)
+    }
   } catch { /* ignore */ }
 
   if (store.generatedDesigns.length > 0) {
     generated.value = true
   }
 })
+
+async function buyQuota() {
+  buyingQuota.value = true
+  try {
+    const res = await buyGenerateQuota()
+    const d = res.data
+    store.setExtraQuota(d.extra_quota, d.extra_quota_fee)
+    store.setGeneratedDesigns(
+      store.generatedDesigns,
+      store.designMessage,
+      d.generate_count,
+      d.limit,
+    )
+    // Auto-generate setelah beli kuota
+    await generate()
+  } catch (e) {
+    alert('Gagal membeli kuota: ' + (e?.response?.data?.error || e.message))
+  } finally {
+    buyingQuota.value = false
+  }
+}
 
 async function generate() {
   if (store.isGenerateLimited) return
@@ -228,6 +264,25 @@ async function generate() {
 }
 .limit-banner span { font-size: 1.5rem; flex-shrink: 0; }
 .limit-banner p { color: var(--warm-gray); margin: 4px 0 0; font-size: 0.85rem; }
+.limit-content { flex: 1; }
+.limit-content strong { display: block; margin-bottom: 4px; color: var(--charcoal); }
+
+.buy-quota-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border: 1.5px solid #FFB74D;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin: 12px 0 6px;
+  gap: 12px;
+}
+.quota-pack-info { display: flex; flex-direction: column; gap: 2px; }
+.quota-pack-label { font-size: 0.82rem; font-weight: 600; color: var(--charcoal); }
+.quota-pack-price { font-size: 1rem; font-weight: 700; color: var(--deep-rose); }
+.buy-quota-btn { white-space: nowrap; flex-shrink: 0; }
+.quota-note { font-size: 0.75rem; color: var(--warm-gray); margin-top: 4px !important; }
 
 .quota-info { text-align: center; margin-bottom: 16px; }
 .quota-badge {

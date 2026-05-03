@@ -8,7 +8,7 @@
           <span class="logo-text">Bloome</span>
         </router-link>
         <div class="nav-links">
-          <router-link to="/" class="nav-link">Beranda</router-link>
+          <router-link to="/" class="nav-link hide-mobile">Beranda</router-link>
           <router-link to="/catalog" class="nav-link">Katalog</router-link>
           <router-link to="/order" class="btn btn-primary btn-nav">Buat Bouquet</router-link>
 
@@ -234,8 +234,8 @@ main.main-admin { padding: 0; }
   .navbar-inner { height: 52px; }
   .logo-text { font-size: 1.3rem; }
 
-  .nav-links { gap: 8px; }
-  .nav-link { display: none; } /* hide text links on mobile */
+  .nav-links { gap: 6px; }
+  .hide-mobile { display: none; } /* hide Beranda only */
 
   .btn-nav {
     padding: 8px 14px;
@@ -245,7 +245,7 @@ main.main-admin { padding: 0; }
   .user-name { display: none; }
   .user-btn { padding: 5px 10px 5px 5px; }
 
-  main { padding: 0 0px; min-height: calc(100vh - 52px - 80px); }
+  main { padding: 0; min-height: calc(100vh - 52px - 80px); }
   .footer { margin-top: 40px; padding: 28px 0; }
 }
 

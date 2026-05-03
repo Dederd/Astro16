@@ -57,6 +57,9 @@ export const agentGenerateBouquet = (data) =>
 export const getGenerateStatus = () =>
   api.get('/agent/generate-status')
 
+export const buyGenerateQuota = () =>
+  api.post('/agent/buy-quota')
+
 // Orders
 export const createOrder = (data) => api.post('/orders', data)
 export const getOrder = (id) => api.get(`/orders/${id}`)

@@ -65,6 +65,7 @@ func main() {
 		// AI Agents — optional auth untuk rate limit per-akun
 		api.POST("/agent/verify-selection", handlers.OptionalAuthMiddleware(), handlers.AgentVerifySelection)
 		api.POST("/agent/generate-bouquet", handlers.OptionalAuthMiddleware(), handlers.AgentGenerateBouquet)
+		api.POST("/agent/buy-quota", handlers.OptionalAuthMiddleware(), handlers.BuyGenerateQuota)
 		api.GET("/agent/generate-status", handlers.OptionalAuthMiddleware(), handlers.GetGenerateStatus)
 
 		// Orders — optional auth (link ke user jika login)

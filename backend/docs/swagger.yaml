@@ -410,6 +410,14 @@ paths:
       summary: '[Admin] Statistik dashboard'
       tags:
       - admin
+  /agent/buy-quota:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: Beli 3 kuota generate tambahan (Rp5.000)
+      tags:
+      - agent
   /agent/generate-bouquet:
     post:
       consumes:

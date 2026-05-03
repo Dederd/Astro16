@@ -129,6 +129,10 @@
               <span>🤖 Biaya AI Generate</span>
               <span>Rp{{ formatPrice(store.AI_FEE) }}</span>
             </div>
+            <div v-if="store.extraQuotaFee > 0" class="breakdown-row ai-fee">
+              <span>✨ Kuota Generate Tambahan</span>
+              <span>Rp{{ formatPrice(store.extraQuotaFee) }}</span>
+            </div>
             <div class="breakdown-row">
               <span>🚚 Ongkos Kirim ({{ form.courier_service ? form.courier_service.toUpperCase() : '—' }})</span>
               <span>{{ form.courier_service ? 'Rp' + formatPrice(store.shippingCost) : '—' }}</span>
@@ -277,10 +281,11 @@ async function handlePayment() {
       order_source:      isCatalog ? 'catalog' : 'ai_generated',
       catalog_item_id:   isCatalog ? store.selectedCatalogItem?.id : '',
       // Cost breakdown
-      flower_cost:   breakdown?.flower_cost || 0,
-      making_fee:    breakdown?.making_fee || 0,
-      ai_fee:        breakdown?.ai_fee || 0,
-      shipping_cost: breakdown?.shipping_cost || 0,
+      flower_cost:        breakdown?.flower_cost || 0,
+      making_fee:         breakdown?.making_fee || 0,
+      ai_fee:             breakdown?.ai_fee || 0,
+      extra_quota_fee:    breakdown?.extra_quota_fee || 0,
+      shipping_cost:      breakdown?.shipping_cost || 0,
     }
 
     const orderRes = await createOrder(orderPayload)

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -136,27 +137,35 @@ func AgentGenerateBouquet(c *gin.Context) {
 		return
 	}
 
-	// Rate limiting: max 2x generate gratis per session
+	// Rate limiting: gunakan user_id jika login, fallback ke session ID
 	sessionID := c.GetHeader("X-Session-ID")
+	if userID, exists := c.Get("user_id"); exists {
+		if uid, ok := userID.(uint); ok && uid > 0 {
+			sessionID = fmt.Sprintf("user_%d", uid)
+		}
+	}
 	if sessionID == "" {
-		sessionID = c.ClientIP() // fallback ke IP jika tidak ada session
+		sessionID = c.ClientIP()
 	}
 
-	maxFree := 2
+	const maxFree = 2
+	const aiFeePerGenerate = int64(5000)
+
 	session, err := services.GetOrCreateSession(sessionID)
 	if err != nil {
 		log.Printf("[AgentGenerateBouquet] session error: %v", err)
 	} else if session.GenerateCount >= maxFree && !session.IsPaid {
 		c.JSON(http.StatusTooManyRequests, gin.H{
-			"error":          "Batas generate gratis tercapai (2x). Silakan lakukan pembelian untuk generate lebih banyak.",
+			"error":          "Batas generate gratis tercapai (2x). Bayar Rp5.000 untuk 1x generate tambahan.",
 			"generate_count": session.GenerateCount,
 			"limit":          maxFree,
 			"is_limited":     true,
+			"ai_fee":         aiFeePerGenerate,
 		})
 		return
 	}
 
-	// Hitung total stem count dari pilihan user untuk dikirim ke AI
+	// Hitung total stem count
 	totalStemCount := 0
 	for _, sf := range req.SelectedFlowers {
 		totalStemCount += sf.Quantity
@@ -170,15 +179,23 @@ func AgentGenerateBouquet(c *gin.Context) {
 		return
 	}
 
-	// Increment session counter setelah berhasil
 	if session != nil {
 		services.IncrementGenerateCount(sessionID)
+	}
+
+	// Apakah generate ini berbayar (di atas free tier)?
+	isThisPaid := session != nil && session.GenerateCount >= maxFree
+	aiFee := int64(0)
+	if isThisPaid {
+		aiFee = aiFeePerGenerate
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data":           result,
 		"generate_count": session.GenerateCount + 1,
 		"limit":          maxFree,
+		"ai_fee":         aiFee,
+		"is_paid_generate": isThisPaid,
 	})
 }
 
@@ -191,12 +208,17 @@ func AgentGenerateBouquet(c *gin.Context) {
 // @Router       /agent/generate-status [get]
 func GetGenerateStatus(c *gin.Context) {
 	sessionID := c.GetHeader("X-Session-ID")
+	if userID, exists := c.Get("user_id"); exists {
+		if uid, ok := userID.(uint); ok && uid > 0 {
+			sessionID = fmt.Sprintf("user_%d", uid)
+		}
+	}
 	if sessionID == "" {
 		sessionID = c.ClientIP()
 	}
 	session, err := services.GetOrCreateSession(sessionID)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"generate_count": 0, "limit": 2, "is_limited": false})
+		c.JSON(http.StatusOK, gin.H{"generate_count": 0, "limit": 2, "is_limited": false, "ai_fee": 5000})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -204,6 +226,7 @@ func GetGenerateStatus(c *gin.Context) {
 		"limit":          2,
 		"is_limited":     session.GenerateCount >= 2 && !session.IsPaid,
 		"is_paid":        session.IsPaid,
+		"ai_fee":         5000,
 	})
 }
 
@@ -250,8 +273,19 @@ func CreateOrder(c *gin.Context) {
 		CourierService:   req.CourierService,
 		OrderSource:      req.OrderSource,
 		CatalogItemID:    req.CatalogItemID,
+		FlowerCost:       req.FlowerCost,
+		MakingFee:        req.MakingFee,
+		AIFee:            req.AIFee,
+		ShippingCost:     req.ShippingCost,
 		Status:           "pending",
 		CreatedAt:        time.Now(),
+	}
+
+	// Link order ke akun user jika sudah login (set oleh OptionalAuthMiddleware)
+	if userID, exists := c.Get("user_id"); exists {
+		if uid, ok := userID.(uint); ok && uid > 0 {
+			order.UserID = &uid
+		}
 	}
 
 	if err := services.SaveOrder(order); err != nil {

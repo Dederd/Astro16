@@ -123,7 +123,8 @@
     <!-- Actions -->
     <div class="finish-actions">
       <button class="btn btn-primary" @click="$router.push('/')">🏠 Kembali ke Beranda</button>
-      <button class="btn btn-outline" @click="$router.push('/catalog')">🛍️ Lihat Katalog Lagi</button>
+      <button class="btn btn-outline" @click="$router.push('/my-orders')">📦 Lihat Pesanan Saya</button>
+      <InvoiceDownload v-if="order && status === 'success'" :order="order" />
     </div>
   </div>
 </template>
@@ -132,6 +133,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getOrder, getOrderTracking } from '@/services/api'
+import InvoiceDownload from '@/components/InvoiceDownload.vue'
 
 const route = useRoute()
 

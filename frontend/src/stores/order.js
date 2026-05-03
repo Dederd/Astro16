@@ -38,15 +38,60 @@ export const useOrderStore = defineStore('order', () => {
     })()
   )
 
-  // Computed
+  // Biaya tetap
+  const MAKING_FEE = 5000   // biaya pembuatan bouquet
+  const AI_FEE = 5000       // biaya AI generate (jika pakai & sudah habis kuota gratis)
+  const SHIPPING_FEE_DEFAULT = 15000 // default, akan di-override dari kurir
+
+  // Apakah generate ini berbayar (user sudah habis kuota gratis)
+  const aiFeePaid = ref(false)   // di-set dari response AgentGenerateBouquet
+
+  // Harga bunga per tangkai × jumlah tangkai
+  const flowerCost = computed(() => {
+    if (orderMode.value === 'catalog') return 0
+    return selectedFlowers.value.reduce((sum, f) => {
+      const price = f.price_per_stem || 0
+      return sum + price * f.quantity
+    }, 0)
+  })
+
+  const shippingCost = ref(0) // di-set saat user pilih kurir
+
+  // Total breakdown
   const totalPrice = computed(() => {
     if (orderMode.value === 'catalog' && selectedCatalogItem.value) {
-      return selectedCatalogItem.value.price
+      return selectedCatalogItem.value.price + shippingCost.value
     }
     if (!selectedDesign.value || !selectedSize.value) return 0
-    return selectedSize.value === 'small'
+    const stemPrice = selectedSize.value === 'small'
       ? selectedDesign.value.small.price
       : selectedDesign.value.large.price
+    const ai = aiFeePaid.value ? AI_FEE : 0
+    return stemPrice + MAKING_FEE + ai + shippingCost.value
+  })
+
+  const priceBreakdown = computed(() => {
+    if (orderMode.value === 'catalog' && selectedCatalogItem.value) {
+      return {
+        flower_cost: selectedCatalogItem.value.price,
+        making_fee: 0,
+        ai_fee: 0,
+        shipping_cost: shippingCost.value,
+        total: selectedCatalogItem.value.price + shippingCost.value,
+      }
+    }
+    if (!selectedDesign.value || !selectedSize.value) return null
+    const stemPrice = selectedSize.value === 'small'
+      ? selectedDesign.value.small.price
+      : selectedDesign.value.large.price
+    const ai = aiFeePaid.value ? AI_FEE : 0
+    return {
+      flower_cost: stemPrice,
+      making_fee: MAKING_FEE,
+      ai_fee: ai,
+      shipping_cost: shippingCost.value,
+      total: stemPrice + MAKING_FEE + ai + shippingCost.value,
+    }
   })
 
   const flowerCount = computed(() =>
@@ -123,6 +168,9 @@ export const useOrderStore = defineStore('order', () => {
 
   function setCreatedOrder(order) { createdOrder.value = order }
 
+  function setAIFeePaid(paid) { aiFeePaid.value = paid }
+  function setShippingCost(cost) { shippingCost.value = cost }
+
   function reset() {
     currentStep.value = 1
     selectedBouquetType.value = null
@@ -137,6 +185,8 @@ export const useOrderStore = defineStore('order', () => {
     orderMode.value = 'ai'
     selectedCatalogItem.value = null
     createdOrder.value = null
+    aiFeePaid.value = false
+    shippingCost.value = 0
   }
 
   return {
@@ -144,10 +194,11 @@ export const useOrderStore = defineStore('order', () => {
     recommendedFlowerIds, selectedFlowers, generatedDesigns, designMessage,
     selectedDesign, selectedSize, generateCount, generateLimit,
     orderMode, selectedCatalogItem, createdOrder, totalPrice, flowerCount,
-    isGenerateLimited, sessionId,
+    isGenerateLimited, sessionId, aiFeePaid, shippingCost, priceBreakdown,
+    MAKING_FEE, AI_FEE,
     setStep, selectBouquetType, setAgentResponse, toggleFlower,
     updateFlowerQuantity, isFlowerSelected, getFlowerQuantity,
     setGeneratedDesigns, selectDesign, setOrderMode, selectCatalogItem,
-    setCreatedOrder, reset,
+    setCreatedOrder, setAIFeePaid, setShippingCost, reset,
   }
 })

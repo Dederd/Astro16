@@ -38,6 +38,8 @@ definitions:
     type: object
   models.CreateOrderRequest:
     properties:
+      ai_fee:
+        type: integer
       bouquet_type_id:
         type: string
       catalog_item_id:
@@ -54,6 +56,11 @@ definitions:
         type: string
       design_name:
         type: string
+      flower_cost:
+        description: Biaya breakdown
+        type: integer
+      making_fee:
+        type: integer
       notes:
         type: string
       order_source:
@@ -67,6 +74,8 @@ definitions:
         type: string
       shipping_city:
         type: string
+      shipping_cost:
+        type: integer
       shipping_phone:
         type: string
       shipping_postcode:

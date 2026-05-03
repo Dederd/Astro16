@@ -62,10 +62,10 @@ func main() {
 		// Katalog pre-made
 		api.GET("/catalog", handlers.GetCatalog)
 
-		// AI Agents
-		api.POST("/agent/verify-selection", handlers.AgentVerifySelection)
-		api.POST("/agent/generate-bouquet", handlers.AgentGenerateBouquet)
-		api.GET("/agent/generate-status", handlers.GetGenerateStatus)
+		// AI Agents — optional auth untuk rate limit per-akun
+		api.POST("/agent/verify-selection", handlers.OptionalAuthMiddleware(), handlers.AgentVerifySelection)
+		api.POST("/agent/generate-bouquet", handlers.OptionalAuthMiddleware(), handlers.AgentGenerateBouquet)
+		api.GET("/agent/generate-status", handlers.OptionalAuthMiddleware(), handlers.GetGenerateStatus)
 
 		// Orders — optional auth (link ke user jika login)
 		api.POST("/orders", handlers.OptionalAuthMiddleware(), handlers.CreateOrder)

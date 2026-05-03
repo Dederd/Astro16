@@ -23,14 +23,14 @@
     <div v-if="store.isGenerateLimited && !generated" class="limit-banner">
       <span>🔒</span>
       <div>
-        <strong>Batas generate gratis tercapai ({{ store.generateCount }}/{{ store.generateLimit }}x)</strong>
-        <p>Silakan pilih desain yang sudah ada, atau lakukan pembelian untuk membuka kuota tambahan.</p>
+        <strong>Kuota gratis habis ({{ store.generateCount }}/{{ store.generateLimit }}x)</strong>
+        <p>Generate berikutnya dikenakan biaya <strong>Rp5.000/generate</strong> dan akan ditambahkan ke total pesanan. Atau pilih dari desain yang sudah ada di bawah.</p>
       </div>
     </div>
 
     <!-- Generate quota info -->
     <div v-else-if="!generated && !loading" class="quota-info">
-      <span class="quota-badge">{{ store.generateCount }}/{{ store.generateLimit }} generate terpakai</span>
+      <span class="quota-badge">{{ store.generateCount }}/{{ store.generateLimit }} generate gratis terpakai</span>
     </div>
 
     <!-- Generate zone (before generation) -->
@@ -180,8 +180,11 @@ async function generate() {
     const { designs, message } = res.data.data
     const generateCount = res.data.generate_count
     const limit = res.data.limit
+    const aiFee = res.data.ai_fee || 0
 
     store.setGeneratedDesigns(designs, message, generateCount, limit)
+    // Tandai apakah generate ini berbayar (AI fee dikenakan)
+    store.setAIFeePaid(aiFee > 0)
     generated.value = true
   } catch (e) {
     const errData = e?.response?.data

@@ -390,8 +390,23 @@ type GenerateSessionDB struct {
 func (GenerateSessionDB) TableName() string { return "generate_sessions" }
 
 // ────────────────────────────────────────────────────────────
-// Tracking types
+// Design cache — simpan hasil generate berdasarkan hash kombinasi bunga
 // ────────────────────────────────────────────────────────────
+
+type DesignCacheDB struct {
+	CacheKey    string    `gorm:"primaryKey;type:varchar(64)" json:"cache_key"` // SHA256 dari kombinasi bunga+type
+	BouquetTypeID string  `gorm:"type:varchar(50)" json:"bouquet_type_id"`
+	FlowerCombo string    `gorm:"type:text" json:"flower_combo"` // sorted JSON flower IDs+qty
+	DesignsJSON string    `gorm:"type:jsonb" json:"designs_json"`
+	Message     string    `gorm:"type:text" json:"message"`
+	HitCount    int       `gorm:"default:0" json:"hit_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (DesignCacheDB) TableName() string { return "design_cache" }
+
+
 
 type TrackingInfo struct {
 	OrderID        string `json:"order_id"`

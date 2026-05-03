@@ -131,7 +131,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useOrderStore } from '@/stores/order'
-import { agentGenerateBouquet, getGenerateStatus, buyGenerateQuota } from '@/services/api'
+import { agentGenerateBouquet, getGenerateStatus, buyGenerateQuota, confirmQuotaPayment } from '@/services/api'
 import DesignCard from '@/components/DesignCard.vue'
 
 const store = useOrderStore()
@@ -172,18 +172,44 @@ async function buyQuota() {
   buyingQuota.value = true
   try {
     const res = await buyGenerateQuota()
-    const d = res.data
-    store.setExtraQuota(d.extra_quota, d.extra_quota_fee)
-    store.setGeneratedDesigns(
-      store.generatedDesigns,
-      store.designMessage,
-      d.generate_count,
-      d.limit,
-    )
-    // Auto-generate setelah beli kuota
-    await generate()
+    const { snap_token, order_id, session_id } = res.data
+
+    if (!snap_token) {
+      alert('Gagal mendapatkan token pembayaran.')
+      return
+    }
+
+    // Buka Midtrans Snap popup
+    window.snap.pay(snap_token, {
+      onSuccess: async () => {
+        try {
+          const confirmRes = await confirmQuotaPayment({ order_id, session_id })
+          const d = confirmRes.data
+          store.setExtraQuota(d.extra_quota, d.extra_quota_fee)
+          store.setGeneratedDesigns(
+            store.generatedDesigns,
+            store.designMessage,
+            d.generate_count,
+            d.limit,
+          )
+          // Auto-generate setelah kuota berhasil dibeli
+          await generate()
+        } catch (e) {
+          alert('Pembayaran berhasil, namun gagal menambah kuota. Hubungi support.')
+        }
+      },
+      onPending: () => {
+        alert('Pembayaran sedang diproses. Kuota akan ditambahkan setelah pembayaran dikonfirmasi.')
+      },
+      onError: () => {
+        alert('Pembayaran gagal. Silakan coba lagi.')
+      },
+      onClose: () => {
+        // User menutup popup tanpa bayar
+      },
+    })
   } catch (e) {
-    alert('Gagal membeli kuota: ' + (e?.response?.data?.error || e.message))
+    alert('Gagal membuat token pembayaran: ' + (e?.response?.data?.error || e.message))
   } finally {
     buyingQuota.value = false
   }

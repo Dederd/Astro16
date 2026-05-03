@@ -1,5 +1,32 @@
 <template>
-  <div class="admin-page">
+  <!-- Admin Login Gate -->
+  <div v-if="!isAuthenticated" class="admin-login-page">
+    <div class="admin-login-card">
+      <div class="admin-login-brand">
+        <span class="login-icon">🌸</span>
+        <h1>Admin Panel</h1>
+        <p>Masuk untuk mengakses dashboard admin</p>
+      </div>
+      <form class="admin-login-form" @submit.prevent="doLogin">
+        <div class="form-group">
+          <label>Password Admin</label>
+          <input
+            v-model="loginPassword"
+            type="password"
+            placeholder="Masukkan password admin"
+            class="form-input"
+            autofocus
+          />
+        </div>
+        <div v-if="loginError" class="login-error">{{ loginError }}</div>
+        <button type="submit" class="btn btn-primary btn-full" :disabled="loginLoading">
+          {{ loginLoading ? 'Memverifikasi...' : '🔐 Masuk' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div v-else class="admin-page">
     <!-- Sidebar -->
     <aside class="admin-sidebar">
       <div class="sidebar-brand">
@@ -383,6 +410,36 @@ import {
   adminGetCatalog, adminCreateCatalog, adminUpdateCatalog, adminDeleteCatalog
 } from '@/services/api'
 
+// ── Admin Auth ──
+const ADMIN_SESSION_KEY = 'bloome_admin_auth'
+const isAuthenticated = ref(false)
+const loginPassword = ref('')
+const loginError = ref('')
+const loginLoading = ref(false)
+
+function doLogin() {
+  loginLoading.value = true
+  loginError.value = ''
+  const adminKey = import.meta.env.VITE_ADMIN_KEY || 'admin-bouquet-2024'
+  setTimeout(() => {
+    if (loginPassword.value === adminKey) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, '1')
+      isAuthenticated.value = true
+      loadAll()
+    } else {
+      loginError.value = 'Password salah. Silakan coba lagi.'
+    }
+    loginLoading.value = false
+    loginPassword.value = ''
+  }, 400)
+}
+
+function checkAuth() {
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === '1') {
+    isAuthenticated.value = true
+  }
+}
+
 const activeTab = ref('dashboard')
 const tabs = [
   { id: 'dashboard', icon: '📊', label: 'Dashboard' },
@@ -435,8 +492,13 @@ function defaultCatalogForm() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadStats(), loadOrders(), loadFlowers(), loadCatalog()])
+  checkAuth()
+  if (isAuthenticated.value) await loadAll()
 })
+
+async function loadAll() {
+  await Promise.all([loadStats(), loadOrders(), loadFlowers(), loadCatalog()])
+}
 
 async function loadStats() {
   statsLoading.value = true
@@ -774,4 +836,43 @@ function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
   .stats-grid { grid-template-columns: 1fr; }
   .admin-main { padding: 12px; }
 }
+
+/* ── Admin Login Gate ── */
+.admin-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FFF8F5 0%, #FDF0EC 100%);
+  padding: 24px;
+}
+.admin-login-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 400px;
+}
+.admin-login-brand {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.login-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+.admin-login-brand h1 {
+  font-size: 1.8rem;
+  color: #C62B6D;
+  margin: 0 0 8px;
+}
+.admin-login-brand p { color: #888; font-size: 0.9rem; margin: 0; }
+.admin-login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-error {
+  background: #FFF3F3;
+  border: 1px solid #FFCDD2;
+  color: #C62828;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+.btn-full { width: 100%; justify-content: center; }
 </style>

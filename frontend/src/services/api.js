@@ -60,6 +60,9 @@ export const getGenerateStatus = () =>
 export const buyGenerateQuota = () =>
   api.post('/agent/buy-quota')
 
+export const confirmQuotaPayment = (data) =>
+  api.post('/agent/confirm-quota', data)
+
 // Orders
 export const createOrder = (data) => api.post('/orders', data)
 export const getOrder = (id) => api.get(`/orders/${id}`)

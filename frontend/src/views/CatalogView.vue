@@ -193,4 +193,38 @@ function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
 
 .slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease; }
 .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
+
+@media (max-width: 640px) {
+  .catalog-page { padding-bottom: 140px; }
+  .catalog-hero { padding: 32px 16px 24px; }
+  .catalog-hero h1 { font-size: clamp(1.6rem, 6vw, 2.2rem); }
+  .catalog-hero p { font-size: 0.88rem; }
+
+  .filter-section {
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .filter-section::-webkit-scrollbar { display: none; }
+  .filter-tabs { flex-wrap: nowrap; }
+  .filter-tab { white-space: nowrap; padding: 7px 14px; font-size: 0.78rem; }
+
+  .catalog-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+
+  .selection-bar {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .sel-actions { width: 100%; }
+  .sel-actions .btn { flex: 1; justify-content: center; }
+}
+
+@media (max-width: 380px) {
+  .catalog-grid { grid-template-columns: 1fr !important; }
+}
 </style>

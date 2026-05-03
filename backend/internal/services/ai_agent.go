@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,8 +10,10 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
+	"bouquet-app/internal/database"
 	"bouquet-app/internal/models"
 )
 
@@ -195,11 +198,91 @@ func agent1Fallback(req models.AgentVerifyRequest, allFlowers []models.Flower) *
 }
 
 // ────────────────────────────────────────────────────────────
+// Design Cache helpers
+// ────────────────────────────────────────────────────────────
+
+// buildCacheKey membuat hash SHA256 dari kombinasi bouquet_type + sorted flower IDs & qty
+func buildCacheKey(bouquetTypeID string, flowers []models.SelectedFlower) string {
+	type flowerEntry struct {
+		ID  string `json:"id"`
+		Qty int    `json:"qty"`
+	}
+	entries := make([]flowerEntry, 0, len(flowers))
+	for _, f := range flowers {
+		entries = append(entries, flowerEntry{ID: f.FlowerID, Qty: f.Quantity})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].ID < entries[j].ID })
+
+	raw, _ := json.Marshal(map[string]interface{}{
+		"type":    bouquetTypeID,
+		"flowers": entries,
+	})
+
+	h := sha256.Sum256(raw)
+	return fmt.Sprintf("%x", h)[:32]
+}
+
+// lookupDesignCache cek apakah kombinasi bunga sudah pernah di-generate
+func lookupDesignCache(cacheKey string) (*models.GenerateBouquetResponse, bool) {
+	var cache models.DesignCacheDB
+	if err := database.DB.First(&cache, "cache_key = ?", cacheKey).Error; err != nil {
+		return nil, false
+	}
+
+	var result models.GenerateBouquetResponse
+	if err := json.Unmarshal([]byte(cache.DesignsJSON), &result.Designs); err != nil {
+		log.Printf("[DesignCache] gagal parse designs: %v", err)
+		return nil, false
+	}
+	result.Message = cache.Message
+
+	// Increment hit count
+	database.DB.Model(&models.DesignCacheDB{}).
+		Where("cache_key = ?", cacheKey).
+		UpdateColumn("hit_count", database.DB.Raw("hit_count + 1"))
+
+	log.Printf("[DesignCache] HIT untuk key=%s (hit #%d+)", cacheKey, cache.HitCount+1)
+	return &result, true
+}
+
+// saveDesignCache simpan hasil generate ke cache
+func saveDesignCache(cacheKey, bouquetTypeID string, flowers []models.SelectedFlower, result *models.GenerateBouquetResponse) {
+	designsJSON, err := json.Marshal(result.Designs)
+	if err != nil {
+		log.Printf("[DesignCache] gagal marshal designs: %v", err)
+		return
+	}
+
+	flowerComboJSON, _ := json.Marshal(flowers)
+
+	cache := models.DesignCacheDB{
+		CacheKey:      cacheKey,
+		BouquetTypeID: bouquetTypeID,
+		FlowerCombo:   string(flowerComboJSON),
+		DesignsJSON:   string(designsJSON),
+		Message:       result.Message,
+		HitCount:      0,
+	}
+
+	if err := database.DB.Create(&cache).Error; err != nil {
+		log.Printf("[DesignCache] gagal simpan cache: %v", err)
+	} else {
+		log.Printf("[DesignCache] SAVED key=%s", cacheKey)
+	}
+}
+
+// ────────────────────────────────────────────────────────────
 // Agent 2 — Generate desain bouquet
 // SINKRON: stem_count di output AI = total tangkai yg dipilih user
 // ────────────────────────────────────────────────────────────
 
 func Agent2GenerateBouquet(req models.GenerateBouquetRequest) (*models.GenerateBouquetResponse, error) {
+	// ── Cache lookup: jika kombinasi bunga sama, pakai hasil lama ──
+	cacheKey := buildCacheKey(req.BouquetTypeID, req.SelectedFlowers)
+	if cached, ok := lookupDesignCache(cacheKey); ok {
+		return cached, nil
+	}
+
 	allFlowers := GetAllFlowers()
 	flowerMap := make(map[string]models.Flower)
 	for _, f := range allFlowers {
@@ -325,6 +408,9 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
 		result.Designs[i].LargeSize.Price = priceLarge
 		result.Designs[i].LargeSize.StemCount = stemLarge
 	}
+
+	// ── Simpan ke cache untuk penggunaan berikutnya ──
+	go saveDesignCache(cacheKey, req.BouquetTypeID, req.SelectedFlowers, &result)
 
 	return &result, nil
 }

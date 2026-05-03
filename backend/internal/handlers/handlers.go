@@ -208,14 +208,16 @@ func AgentGenerateBouquet(c *gin.Context) {
 }
 
 // BuyGenerateQuota godoc
-// @Summary      Beli 3 kuota generate tambahan (Rp5.000)
+// @Summary      Buat token pembayaran Midtrans untuk beli 3 kuota generate (Rp5.000)
 // @Tags         agent
 // @Produce      json
 // @Router       /agent/buy-quota [post]
 func BuyGenerateQuota(c *gin.Context) {
 	sessionID := c.GetHeader("X-Session-ID")
+	var userIDVal uint
 	if userID, exists := c.Get("user_id"); exists {
 		if uid, ok := userID.(uint); ok && uid > 0 {
+			userIDVal = uid
 			sessionID = fmt.Sprintf("user_%d", uid)
 		}
 	}
@@ -223,20 +225,88 @@ func BuyGenerateQuota(c *gin.Context) {
 		sessionID = c.ClientIP()
 	}
 
-	session, err := services.BuyExtraQuota(sessionID)
+	// Buat order sementara untuk kuota generate (Midtrans membutuhkan order object)
+	quotaOrderID := fmt.Sprintf("QUOTA-%s-%d", sessionID[:min(len(sessionID), 12)], time.Now().UnixMilli())
+	quotaOrder := &models.Order{
+		ID:            quotaOrderID,
+		CustomerName:  "Quota Purchase",
+		CustomerEmail: "quota@bloome.id",
+		CustomerPhone: "08000000000",
+		TotalAmount:   5000,
+		Status:        "pending_quota",
+		OrderSource:   "quota",
+		DesignName:    "Paket 3 Generate",
+		Size:          "paket",
+		UserID:        userIDVal,
+		CreatedAt:     time.Now(),
+	}
+
+	tokenResp, err := services.MidtransCreateQuotaToken(quotaOrder, sessionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membeli kuota: " + err.Error()})
+		log.Printf("[BuyGenerateQuota] Midtrans error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Gagal membuat token pembayaran kuota",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":          "Berhasil membeli 3 kuota generate",
-		"generate_count":   session.GenerateCount,
-		"limit":            2 + session.ExtraQuota,
-		"extra_quota":      session.ExtraQuota,
-		"extra_quota_fee":  session.ExtraQuotaFee,
-		"is_limited":       session.GenerateCount >= (2 + session.ExtraQuota),
+		"snap_token":  tokenResp.Token,
+		"redirect_url": tokenResp.RedirectURL,
+		"order_id":    quotaOrderID,
+		"session_id":  sessionID,
+		"amount":      5000,
 	})
+}
+
+// ConfirmQuotaPayment godoc
+// @Summary      Konfirmasi pembayaran kuota setelah Midtrans callback
+// @Tags         agent
+// @Accept       json
+// @Produce      json
+// @Router       /agent/confirm-quota [post]
+func ConfirmQuotaPayment(c *gin.Context) {
+	var req struct {
+		OrderID   string `json:"order_id"`
+		SessionID string `json:"session_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = c.GetHeader("X-Session-ID")
+		if userID, exists := c.Get("user_id"); exists {
+			if uid, ok := userID.(uint); ok && uid > 0 {
+				sessionID = fmt.Sprintf("user_%d", uid)
+			}
+		}
+	}
+
+	session, err := services.BuyExtraQuota(sessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menambah kuota: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Berhasil membeli 3 kuota generate",
+		"generate_count":  session.GenerateCount,
+		"limit":           2 + session.ExtraQuota,
+		"extra_quota":     session.ExtraQuota,
+		"extra_quota_fee": session.ExtraQuotaFee,
+		"is_limited":      session.GenerateCount >= (2 + session.ExtraQuota),
+	})
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // GetGenerateStatus godoc

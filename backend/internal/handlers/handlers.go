@@ -214,10 +214,10 @@ func AgentGenerateBouquet(c *gin.Context) {
 // @Router       /agent/buy-quota [post]
 func BuyGenerateQuota(c *gin.Context) {
 	sessionID := c.GetHeader("X-Session-ID")
-	var userIDVal uint
+	var userIDVal *uint
 	if userID, exists := c.Get("user_id"); exists {
 		if uid, ok := userID.(uint); ok && uid > 0 {
-			userIDVal = uid
+			userIDVal = &uid
 			sessionID = fmt.Sprintf("user_%d", uid)
 		}
 	}
@@ -300,13 +300,6 @@ func ConfirmQuotaPayment(c *gin.Context) {
 		"extra_quota_fee": session.ExtraQuotaFee,
 		"is_limited":      session.GenerateCount >= (2 + session.ExtraQuota),
 	})
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // GetGenerateStatus godoc

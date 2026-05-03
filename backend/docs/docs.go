@@ -842,6 +842,9 @@ const docTemplate = `{
                 "total_amount"
             ],
             "properties": {
+                "ai_fee": {
+                    "type": "integer"
+                },
                 "bouquet_type_id": {
                     "type": "string"
                 },
@@ -866,6 +869,13 @@ const docTemplate = `{
                 "design_name": {
                     "type": "string"
                 },
+                "flower_cost": {
+                    "description": "Biaya breakdown",
+                    "type": "integer"
+                },
+                "making_fee": {
+                    "type": "integer"
+                },
                 "notes": {
                     "type": "string"
                 },
@@ -884,6 +894,9 @@ const docTemplate = `{
                 },
                 "shipping_city": {
                     "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
                 },
                 "shipping_phone": {
                     "type": "string"

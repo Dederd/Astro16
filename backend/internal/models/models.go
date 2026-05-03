@@ -226,8 +226,13 @@ type OrderDB struct {
 	UserID *uint `gorm:"index" json:"user_id,omitempty"`
 	// Generate count for rate limiting
 	GenerateCount int `gorm:"default:0" json:"generate_count"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	// Biaya breakdown
+	FlowerCost   int64 `gorm:"default:0" json:"flower_cost"`
+	MakingFee    int64 `gorm:"default:5000" json:"making_fee"`
+	AIFee        int64 `gorm:"default:0" json:"ai_fee"`
+	ShippingCost int64 `gorm:"default:0" json:"shipping_cost"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 func (OrderDB) TableName() string { return "orders" }
@@ -256,6 +261,11 @@ func (o *OrderDB) ToOrder() *Order {
 		ShippingStatus:   o.ShippingStatus,
 		OrderSource:      o.OrderSource,
 		CatalogItemID:    o.CatalogItemID,
+		UserID:           o.UserID,
+		FlowerCost:       o.FlowerCost,
+		MakingFee:        o.MakingFee,
+		AIFee:            o.AIFee,
+		ShippingCost:     o.ShippingCost,
 		CreatedAt:        o.CreatedAt,
 	}
 }
@@ -283,7 +293,13 @@ type Order struct {
 	ShippingStatus   string           `json:"shipping_status"`
 	OrderSource      string           `json:"order_source"`
 	CatalogItemID    string           `json:"catalog_item_id"`
-	CreatedAt        time.Time        `json:"created_at"`
+	UserID           *uint            `json:"user_id,omitempty"`
+	// Breakdown biaya
+	FlowerCost   int64 `json:"flower_cost"`
+	MakingFee    int64 `json:"making_fee"`
+	AIFee        int64 `json:"ai_fee"`
+	ShippingCost int64 `json:"shipping_cost"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // ────────────────────────────────────────────────────────────
@@ -308,6 +324,11 @@ type CreateOrderRequest struct {
 	CourierService   string           `json:"courier_service" binding:"required"`
 	OrderSource      string           `json:"order_source"` // ai_generated | catalog
 	CatalogItemID    string           `json:"catalog_item_id"`
+	// Biaya breakdown
+	FlowerCost   int64 `json:"flower_cost"`
+	MakingFee    int64 `json:"making_fee"`
+	AIFee        int64 `json:"ai_fee"`
+	ShippingCost int64 `json:"shipping_cost"`
 }
 
 type PaymentTokenRequest struct {

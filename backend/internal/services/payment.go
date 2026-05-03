@@ -42,6 +42,11 @@ func SaveOrder(order *models.Order) error {
 		CourierService:   order.CourierService,
 		OrderSource:      order.OrderSource,
 		CatalogItemID:    order.CatalogItemID,
+		UserID:           order.UserID,
+		FlowerCost:       order.FlowerCost,
+		MakingFee:        order.MakingFee,
+		AIFee:            order.AIFee,
+		ShippingCost:     order.ShippingCost,
 		CreatedAt:        order.CreatedAt,
 	}
 	result := database.DB.Create(record)

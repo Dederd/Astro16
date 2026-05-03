@@ -368,32 +368,36 @@ img { max-width: 100%; display: block; }
 @media (max-width: 768px) {
   .container { padding: 0 16px; }
 
-  /* Navbar */
+  /* Navbar — tampilkan Katalog, sembunyikan Beranda */
   .navbar-inner { height: 56px; }
-  .nav-links .nav-link { display: none; }
-  .nav-links { gap: 10px; }
-  .btn-nav { padding: 8px 16px; font-size: 0.82rem; }
-  .logo-text { font-size: 1.3rem; }
+  .nav-links { gap: 8px; }
+  .nav-links .nav-link { display: none; }           /* sembunyikan semua link teks by default */
+  .nav-links .nav-link.catalog-link { display: inline-flex; } /* kecuali katalog */
+  .btn-nav { padding: 8px 14px; font-size: 0.8rem; }
+  .logo-text { font-size: 1.25rem; }
 
   /* Hero */
-  .hero { padding: 60px 0 40px; }
-  .hero-title { font-size: clamp(2rem, 8vw, 3rem); }
-  .hero-desc { font-size: 0.9rem; }
+  .hero { padding: 48px 0 32px; }
+  .hero-title { font-size: clamp(1.8rem, 7vw, 2.8rem); }
+  .hero-desc { font-size: 0.88rem; }
 
   /* Cards grid */
-  .steps-grid { grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
-  .occasions-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  .steps-grid { grid-template-columns: 1fr 1fr !important; gap: 14px !important; }
+  .occasions-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
 
   /* Order flow */
   .step-container { padding: 0 4px; }
-  .flower-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
-  .design-grid { grid-template-columns: 1fr !important; }
+  .flower-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .design-grid, .designs-grid { grid-template-columns: 1fr !important; }
+
+  /* Step indicator */
+  .step-indicator { padding: 0 8px; }
 
   /* Checkout */
   .checkout-layout { grid-template-columns: 1fr !important; }
   .order-summary-col { position: static !important; }
   .form-row { grid-template-columns: 1fr !important; }
-  .form-section { padding: 20px 16px; }
+  .form-section { padding: 18px 14px; }
 
   /* My Orders */
   .detail-grid { grid-template-columns: 1fr !important; }
@@ -401,12 +405,28 @@ img { max-width: 100%; display: block; }
 
   /* Catalog */
   .catalog-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  .catalog-filters { flex-wrap: wrap; gap: 8px; }
 
   /* Payment Finish */
   .finish-page { padding: 24px 16px 60px; }
-  .status-card { padding: 32px 20px; }
+  .status-card { padding: 28px 16px; }
   .finish-actions { flex-direction: column; }
   .finish-actions .btn { width: 100%; justify-content: center; }
+
+  /* Limit banner di Step3 */
+  .buy-quota-box { flex-direction: column; align-items: flex-start; }
+  .buy-quota-btn { width: 100%; justify-content: center; }
+
+  /* Generate zone */
+  .generate-zone { padding: 40px 20px; }
+  .gen-flower { font-size: 3.5rem; }
+
+  /* Designs grid */
+  .designs-grid { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Step actions */
+  .step-actions { flex-direction: column-reverse; gap: 10px; }
+  .step-actions .btn { width: 100%; justify-content: center; }
 }
 
 @media (max-width: 480px) {
@@ -415,8 +435,16 @@ img { max-width: 100%; display: block; }
   .catalog-grid { grid-template-columns: 1fr !important; }
   .flower-grid { grid-template-columns: 1fr !important; }
 
+  /* Navbar lebih compact */
+  .navbar-inner { height: 52px; }
+  .logo-text { font-size: 1.15rem; }
+
+  /* Recap flowers */
+  .recap-flowers { gap: 6px; }
+  .recap-tag { font-size: 0.78rem; padding: 4px 10px; }
+
   /* Auth modal */
-  .auth-modal { padding: 24px 20px; margin: 0 8px; }
+  .auth-modal { padding: 20px 16px; margin: 0 8px; }
 }
 
 /* Smooth tap on mobile */

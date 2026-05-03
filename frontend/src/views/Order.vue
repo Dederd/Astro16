@@ -41,14 +41,27 @@ const store = useOrderStore()
 .progress-bar-wrap {
   background: var(--white);
   border-bottom: 1px solid var(--light-gray);
-  padding: 20px 0;
+  padding: 16px 0;
   position: sticky;
   top: 64px;
   z-index: 50;
 }
 
 .order-content {
-  padding-top: 48px;
+  padding-top: 40px;
   padding-bottom: 80px;
+}
+
+@media (max-width: 640px) {
+  .progress-bar-wrap {
+    top: 52px;
+    padding: 12px 0;
+  }
+  .order-content {
+    padding-top: 24px;
+    padding-bottom: 60px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }
 </style>

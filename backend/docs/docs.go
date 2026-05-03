@@ -389,7 +389,22 @@ const docTemplate = `{
                 "tags": [
                     "agent"
                 ],
-                "summary": "Beli 3 kuota generate tambahan (Rp5.000)",
+                "summary": "Buat token pembayaran Midtrans untuk beli 3 kuota generate (Rp5.000)",
+                "responses": {}
+            }
+        },
+        "/agent/confirm-quota": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "Konfirmasi pembayaran kuota setelah Midtrans callback",
                 "responses": {}
             }
         },

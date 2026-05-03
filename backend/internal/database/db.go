@@ -37,6 +37,7 @@ func Connect() {
 		&models.FlowerDB{},
 		&models.CatalogBouquetDB{},
 		&models.GenerateSessionDB{},
+		&models.DesignCacheDB{},
 	); err != nil {
 		log.Fatalf("❌ Gagal auto-migrate: %v", err)
 	}

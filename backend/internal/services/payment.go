@@ -262,9 +262,90 @@ func MidtransCreateToken(order *models.Order) (*models.PaymentTokenResponse, err
 	}, nil
 }
 
-// ────────────────────────────────────────────────────────────
-// Tracking JNE/JNT (BinderByte API — gratis)
-// ────────────────────────────────────────────────────────────
+// MidtransCreateQuotaToken membuat Snap token untuk pembelian kuota generate
+func MidtransCreateQuotaToken(order *models.Order, sessionID string) (*models.PaymentTokenResponse, error) {
+	serverKey := os.Getenv("MIDTRANS_SERVER_KEY")
+	if serverKey == "" {
+		return nil, fmt.Errorf("MIDTRANS_SERVER_KEY tidak diisi di .env")
+	}
+
+	isProduction := os.Getenv("MIDTRANS_IS_PRODUCTION") == "true"
+	baseURL := "https://app.sandbox.midtrans.com/snap/v1/transactions"
+	if isProduction {
+		baseURL = "https://app.midtrans.com/snap/v1/transactions"
+	}
+
+	payload := map[string]interface{}{
+		"transaction_details": map[string]interface{}{
+			"order_id":     order.ID,
+			"gross_amount": 5000,
+		},
+		"customer_details": map[string]interface{}{
+			"first_name": "Pelanggan",
+			"email":      "pelanggan@bloome.id",
+		},
+		"item_details": []map[string]interface{}{
+			{
+				"id":       "QUOTA-3GEN",
+				"price":    5000,
+				"quantity": 1,
+				"name":     "Paket 3 Generate Bouquet",
+			},
+		},
+		"custom_field1": sessionID,
+		"callbacks": map[string]interface{}{
+			"finish": os.Getenv("FRONTEND_URL") + "/order?quota_paid=1&session=" + sessionID,
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("gagal marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", baseURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, fmt.Errorf("gagal buat request: %w", err)
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(serverKey + ":"))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("gagal panggil Midtrans API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	log.Printf("[MidtransCreateQuotaToken] HTTP %d: %s", resp.StatusCode, string(respBody))
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return nil, fmt.Errorf("Midtrans API error (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var midtransResp struct {
+		Token         string   `json:"token"`
+		RedirectURL   string   `json:"redirect_url"`
+		ErrorMessages []string `json:"error_messages"`
+	}
+	if err := json.Unmarshal(respBody, &midtransResp); err != nil {
+		return nil, fmt.Errorf("gagal parse response: %w", err)
+	}
+	if len(midtransResp.ErrorMessages) > 0 {
+		return nil, fmt.Errorf("Midtrans error: %v", midtransResp.ErrorMessages)
+	}
+
+	return &models.PaymentTokenResponse{
+		Token:       midtransResp.Token,
+		RedirectURL: midtransResp.RedirectURL,
+	}, nil
+}
+
+
 
 func GetTrackingInfo(courierService, trackingNumber string) (interface{}, error) {
 	apiKey := os.Getenv("BINDERBYTE_API_KEY")

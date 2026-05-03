@@ -9,7 +9,7 @@
         </router-link>
         <div class="nav-links">
           <router-link to="/" class="nav-link hide-mobile">Beranda</router-link>
-          <router-link to="/catalog" class="nav-link">Katalog</router-link>
+          <router-link to="/catalog" class="nav-link catalog-link">Katalog</router-link>
           <router-link to="/order" class="btn btn-primary btn-nav">Buat Bouquet</router-link>
 
           <!-- Auth area -->
@@ -232,13 +232,27 @@ main.main-admin { padding: 0; }
 /* ── Mobile navbar responsive ── */
 @media (max-width: 640px) {
   .navbar-inner { height: 52px; }
-  .logo-text { font-size: 1.3rem; }
+  .logo-text { font-size: 1.2rem; }
 
   .nav-links { gap: 6px; }
-  .hide-mobile { display: none; } /* hide Beranda only */
+  .hide-mobile { display: none; }  /* sembunyikan Beranda */
+
+  /* Katalog tetap tampil di mobile */
+  .catalog-link {
+    display: inline-flex !important;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    border: 1px solid var(--blush);
+    border-radius: var(--radius-pill);
+    color: var(--deep-rose);
+  }
+  .catalog-link.router-link-active {
+    background: var(--cream);
+    border-color: var(--rose);
+  }
 
   .btn-nav {
-    padding: 8px 14px;
+    padding: 8px 12px;
     font-size: 0.78rem;
   }
 

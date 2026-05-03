@@ -362,4 +362,20 @@ section { padding: 80px 0; }
   background: var(--cream);
   border-color: var(--cream);
 }
+
+/* ── Mobile responsive ── */
+@media (max-width: 640px) {
+  .section { padding: 48px 0; }
+  .section-title { font-size: clamp(1.6rem, 6vw, 2rem); }
+  .hero { padding: 48px 0 32px; }
+  .hero-badge { font-size: 0.7rem; padding: 6px 14px; }
+
+  .steps-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .occasions-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .features-grid { grid-template-columns: 1fr !important; }
+
+  .cta-card { padding: 40px 24px; border-radius: 16px; }
+  .cta-card h2 { font-size: 1.6rem; }
+  .cta-card .btn-primary { padding: 14px 28px; }
+}
 </style>

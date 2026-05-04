@@ -531,15 +531,14 @@ async function loadOrders() {
     const r = await adminGetOrders()
     orders.value = r.data.data || []
     
-    // Check for new paid orders (status = 'paid')
+    // Check for new paid orders (status = 'paid', not yet acknowledged)
     const paidOrders = orders.value.filter(o => o.status === 'paid')
     if (paidOrders.length > 0) {
-      // Load from sessionStorage to get newly notified orders
-      const storedNotified = JSON.parse(sessionStorage.getItem('notified_order_ids') || '[]')
+      const storedNotified = JSON.parse(sessionStorage.getItem('admin_notified_paid_orders') || '[]')
       const newOrders = paidOrders.filter(o => !storedNotified.includes(o.id))
-      if (newOrders.length > 0) {
-        newPaidOrders.value = newOrders
-      }
+      newPaidOrders.value = newOrders
+    } else {
+      newPaidOrders.value = []
     }
   } catch { /* ignore */ } finally { 
     ordersLoading.value = false 
@@ -559,10 +558,10 @@ async function loadCatalog() {
 function viewOrderDetail(order) { selectedOrder.value = order }
 
 function clearNewOrderNotifications() {
-  // Mark these orders as notified
-  const storedNotified = JSON.parse(sessionStorage.getItem('notified_order_ids') || '[]')
-  const newNotified = [...new Set([...storedNotified, ...newPaidOrders.value.map(o => o.order_id || o.id)])]
-  sessionStorage.setItem('notified_order_ids', JSON.stringify(newNotified))
+  // Mark these orders as acknowledged
+  const storedNotified = JSON.parse(sessionStorage.getItem('admin_notified_paid_orders') || '[]')
+  const newNotified = [...new Set([...storedNotified, ...newPaidOrders.value.map(o => o.id)])]
+  sessionStorage.setItem('admin_notified_paid_orders', JSON.stringify(newNotified))
   newPaidOrders.value = []
 }
 
@@ -575,6 +574,8 @@ async function updateOrderStatus(order, newStatus) {
       courier_service: order.courier_service || '',
     })
     order.status = newStatus
+    // Reload orders and stats after update
+    await Promise.all([loadOrders(), loadStats()])
   } catch (e) { alert('Gagal update status: ' + (e?.response?.data?.error || e.message)) }
 }
 
@@ -589,6 +590,8 @@ async function updateResi(order, resi) {
     })
     order.tracking_number = resi
     if (resi) order.shipping_status = 'shipped'
+    // Reload data after update
+    await loadOrders()
   } catch (e) { alert('Gagal update resi: ' + (e?.response?.data?.error || e.message)) }
 }
 

@@ -158,11 +158,37 @@ const trackingData = ref(null)
 const copied = ref(false)
 const paymentLoading = ref(false)
 
+async function pollOrderStatus(maxRetries = 15, delayMs = 500) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await getOrder(orderId.value)
+      const currentOrder = res.data.data
+      if (currentOrder?.status === 'paid') {
+        return currentOrder
+      }
+      if (i < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, delayMs))
+      }
+    } catch (e) {
+      console.error('[pollOrderStatus] error:', e)
+    }
+  }
+  return null
+}
+
 onMounted(async () => {
   if (!orderId.value) { loadingOrder.value = false; return }
   try {
     const res = await getOrder(orderId.value)
     order.value = res.data.data
+
+    // Jika status success tapi order masih pending, polling untuk wait webhook
+    if (status.value === 'success' && order.value?.status === 'pending') {
+      const paidOrder = await pollOrderStatus()
+      if (paidOrder) {
+        order.value = paidOrder
+      }
+    }
 
     // Notify admin jika pembayaran berhasil
     if (status.value === 'success' && order.value?.status === 'paid') {
@@ -212,22 +238,29 @@ async function continuePayment() {
     // Buka Midtrans Snap popup
     window.snap.pay(snap_token, {
       onSuccess: async () => {
-        // Refresh order status dan tampilkan success
+        // Poll untuk wait webhook update status ke paid
         try {
-          const orderRes = await getOrder(orderId.value)
-          order.value = orderRes.data.data
+          const paidOrder = await pollOrderStatus()
+          if (paidOrder) {
+            order.value = paidOrder
+          } else {
+            const orderRes = await getOrder(orderId.value)
+            order.value = orderRes.data.data
+          }
           
           // Notify admin
-          try {
-            await notifyAdminNewOrder({
-              order_id: orderId.value,
-              customer_name: order.value.customer_name,
-              customer_phone: order.value.customer_phone,
-              total_amount: order.value.total_amount,
-              design_name: order.value.design_name || order.value.catalog_item_id,
-            })
-          } catch (e) {
-            console.error('[notifyAdmin] error:', e)
+          if (order.value?.status === 'paid') {
+            try {
+              await notifyAdminNewOrder({
+                order_id: orderId.value,
+                customer_name: order.value.customer_name,
+                customer_phone: order.value.customer_phone,
+                total_amount: order.value.total_amount,
+                design_name: order.value.design_name || order.value.catalog_item_id,
+              })
+            } catch (e) {
+              console.error('[notifyAdmin] error:', e)
+            }
           }
           
           // Update status ke success

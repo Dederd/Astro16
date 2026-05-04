@@ -422,13 +422,16 @@ type TrackingInfo struct {
 // ────────────────────────────────────────────────────────────
 
 type UserDB struct {
-	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name         string    `gorm:"type:varchar(255);not null" json:"name"`
-	Email        string    `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
-	Phone        string    `gorm:"type:varchar(30)" json:"phone"`
-	PasswordHash string    `gorm:"type:varchar(255);not null" json:"-"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                  uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name                string    `gorm:"type:varchar(255);not null" json:"name"`
+	Email               string    `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	Phone               string    `gorm:"type:varchar(30)" json:"phone"`
+	PasswordHash        string    `gorm:"type:varchar(255);not null" json:"-"`
+	FreeGenerateCount   int       `gorm:"default:0" json:"free_generate_count"`   // berapa banyak free generate yang sudah dipakai
+	ExtraQuota          int       `gorm:"default:0" json:"extra_quota"`           // kuota tambahan yang dibeli
+	ExtraQuotaFee       int64     `gorm:"default:0" json:"extra_quota_fee"`       // total biaya kuota yang dibeli (Rp)
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 func (UserDB) TableName() string { return "users" }

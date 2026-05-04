@@ -20,6 +20,16 @@
         <span>ID Pesanan</span>
         <strong>{{ orderId }}</strong>
       </div>
+      <!-- Continue payment button for pending orders -->
+      <button 
+        class="btn btn-primary" 
+        style="margin-top: 24px;"
+        @click="continuePayment"
+        :disabled="paymentLoading"
+      >
+        <span v-if="paymentLoading">⏳ Memproses...</span>
+        <span v-else>💳 Lanjut Pembayaran</span>
+      </button>
     </div>
 
     <!-- Loading order -->
@@ -131,11 +141,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { getOrder, getOrderTracking } from '@/services/api'
+import { useRoute, useRouter } from 'vue-router'
+import { getOrder, getOrderTracking, createPaymentToken, notifyAdminNewOrder } from '@/services/api'
 import InvoiceDownload from '@/components/InvoiceDownload.vue'
 
 const route = useRoute()
+const router = useRouter()
 
 const orderId = computed(() => route.query.order_id)
 const status = computed(() => route.query.status || 'success')
@@ -145,12 +156,28 @@ const loadingOrder = ref(true)
 const loadingTracking = ref(false)
 const trackingData = ref(null)
 const copied = ref(false)
+const paymentLoading = ref(false)
 
 onMounted(async () => {
   if (!orderId.value) { loadingOrder.value = false; return }
   try {
     const res = await getOrder(orderId.value)
     order.value = res.data.data
+
+    // Notify admin jika pembayaran berhasil
+    if (status.value === 'success' && order.value?.status === 'paid') {
+      try {
+        await notifyAdminNewOrder({
+          order_id: orderId.value,
+          customer_name: order.value.customer_name,
+          customer_phone: order.value.customer_phone,
+          total_amount: order.value.total_amount,
+          design_name: order.value.design_name || order.value.catalog_item_id,
+        })
+      } catch (e) {
+        console.error('[notifyAdmin] error:', e)
+      }
+    }
   } catch (e) {
     console.error(e)
   } finally {
@@ -168,6 +195,68 @@ onMounted(async () => {
     }
   }
 })
+
+async function continuePayment() {
+  if (!orderId.value) return
+  paymentLoading.value = true
+  try {
+    // Buat payment token dari order yang pending
+    const res = await createPaymentToken(orderId.value)
+    const { snap_token } = res.data
+    
+    if (!snap_token) {
+      alert('Gagal mendapatkan token pembayaran.')
+      return
+    }
+
+    // Buka Midtrans Snap popup
+    window.snap.pay(snap_token, {
+      onSuccess: async () => {
+        // Refresh order status dan tampilkan success
+        try {
+          const orderRes = await getOrder(orderId.value)
+          order.value = orderRes.data.data
+          
+          // Notify admin
+          try {
+            await notifyAdminNewOrder({
+              order_id: orderId.value,
+              customer_name: order.value.customer_name,
+              customer_phone: order.value.customer_phone,
+              total_amount: order.value.total_amount,
+              design_name: order.value.design_name || order.value.catalog_item_id,
+            })
+          } catch (e) {
+            console.error('[notifyAdmin] error:', e)
+          }
+          
+          // Update status ke success
+          router.push({
+            name: 'payment-finish',
+            query: { order_id: orderId.value, status: 'success' }
+          })
+        } catch (e) {
+          console.error('[continuePayment] error loading order:', e)
+          alert('Pembayaran berhasil namun gagal memuat detail. Cek pesanan Anda.')
+        }
+      },
+      onPending: () => {
+        alert('Pembayaran sedang diproses. Harap tunggu konfirmasi.')
+      },
+      onError: () => {
+        alert('Pembayaran gagal. Silakan coba lagi.')
+      },
+      onClose: () => {
+        // User menutup popup
+      }
+    })
+  } catch (e) {
+    console.error('[continuePayment] error:', e)
+    alert('Gagal memproses pembayaran: ' + (e?.response?.data?.error || e.message))
+  } finally {
+    paymentLoading.value = false
+  }
+}
 
 const trackingStatus = computed(() => {
   return trackingData.value?.courier_data?.summary?.description

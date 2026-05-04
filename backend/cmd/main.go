@@ -93,6 +93,9 @@ func main() {
 		// Dashboard stats
 		admin.GET("/stats", handlers.AdminGetStats)
 
+		// Notifications
+		admin.POST("/notify-new-order", handlers.AdminNotifyNewOrder)
+
 		// Order management
 		admin.GET("/orders", handlers.AdminGetOrders)
 		admin.PUT("/orders/:id", handlers.AdminUpdateOrder)

@@ -91,7 +91,11 @@
               </div>
               <div v-if="order.courier_service" class="detail-item">
                 <span class="detail-label">Kurir</span>
-                <span class="detail-val">{{ order.courier_service }}</span>
+                <span class="detail-val">{{ order.courier_service?.toUpperCase() }}</span>
+              </div>
+              <div v-if="order.tracking_number && order.status !== 'pending' && order.status !== 'paid'" class="detail-item">
+                <span class="detail-label">No. Resi</span>
+                <span class="detail-val monospace" style="font-weight: 600; color: var(--deep-rose);">{{ order.tracking_number }}</span>
               </div>
               <div v-if="order.payment_id" class="detail-item">
                 <span class="detail-label">ID Pembayaran</span>

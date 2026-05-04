@@ -206,6 +206,7 @@ async function buyQuota() {
       },
       onClose: () => {
         // User menutup popup tanpa bayar
+        buyingQuota.value = false
       },
     })
   } catch (e) {

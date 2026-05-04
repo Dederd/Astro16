@@ -103,6 +103,37 @@
             <div v-if="order.notes" class="order-notes">
               📝 {{ order.notes }}
             </div>
+
+            <!-- Action buttons -->
+            <div class="order-actions">
+              <!-- Lanjut Pembayaran (for pending orders) -->
+              <button
+                v-if="order.status === 'pending'"
+                class="btn btn-primary btn-sm"
+                @click="continuePayment(order)"
+              >
+                💳 Lanjut Pembayaran
+              </button>
+
+              <!-- Hubungi Penjual -->
+              <div class="contact-buttons">
+                <a
+                  :href="`https://wa.me/+62823235092101?text=Halo%2C%20saya%20ingin%20menanyakan%20tentang%20pesanan%20saya%20nomor%20${order.id}`"
+                  target="_blank"
+                  class="btn btn-outline btn-sm whatsapp"
+                  title="Chat via WhatsApp"
+                >
+                  💬 WhatsApp
+                </a>
+                <a
+                  href="mailto:astroreborn441@gmail.com?subject=Pertanyaan%20Pesanan%20Bouquet"
+                  class="btn btn-outline btn-sm email"
+                  title="Email"
+                >
+                  ✉️ Email
+                </a>
+              </div>
+            </div>
           </div>
         </transition>
       </div>
@@ -182,6 +213,20 @@ function trackingSteps(status) {
     active: i === currentIdx,
     time: null,
   }))
+}
+
+async function continuePayment(order) {
+  try {
+    // Redirect to payment finish page with order id
+    // User will see option to proceed with payment
+    router.push({
+      name: 'payment-finish',
+      query: { order_id: order.id, status: 'pending' }
+    })
+  } catch (e) {
+    console.error('[continuePayment] error:', e)
+    alert('Gagal melanjutkan pembayaran. Silakan coba lagi.')
+  }
 }
 </script>
 
@@ -363,4 +408,59 @@ function trackingSteps(status) {
 .empty-state { text-align: center; padding: 80px 20px; color: var(--warm-gray); }
 .empty-state span { font-size: 3rem; display: block; margin-bottom: 16px; }
 .empty-state p { margin-bottom: 20px; }
+
+/* Order actions */
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--light-gray);
+  align-items: center;
+}
+
+.contact-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.82rem;
+}
+
+.whatsapp {
+  background: #25D366 !important;
+  color: white !important;
+  border-color: #25D366 !important;
+}
+.whatsapp:hover {
+  background: #1EAD52 !important;
+  border-color: #1EAD52 !important;
+}
+
+.email {
+  background: #EA4335 !important;
+  color: white !important;
+  border-color: #EA4335 !important;
+}
+.email:hover {
+  background: #D33425 !important;
+  border-color: #D33425 !important;
+}
+
+@media (max-width: 640px) {
+  .order-actions {
+    flex-direction: column;
+  }
+  .contact-buttons {
+    margin-left: 0;
+    width: 100%;
+  }
+  .contact-buttons .btn {
+    flex: 1;
+  }
+}
 </style>

@@ -72,6 +72,20 @@ export const getOrderTracking = (id) => api.get(`/orders/${id}/tracking`)
 export const createPaymentToken = (orderId) =>
   api.post('/payment/token', { order_id: orderId })
 
+// Admin notifications
+export const notifyAdminNewOrder = (data) => {
+  // Buat request dengan admin key untuk notifikasi
+  const adminKey = import.meta.env.VITE_ADMIN_KEY || 'admin-bouquet-2024'
+  return api.post('/admin/notify-new-order', data, {
+    headers: {
+      'X-Admin-Key': adminKey
+    }
+  }).catch(err => {
+    // Silent fail - notification is not critical
+    console.debug('[notifyAdminNewOrder] failed:', err?.response?.status)
+  })
+}
+
 // Admin
 const adminKey = import.meta.env.VITE_ADMIN_KEY || 'admin-bouquet-2024'
 const adminApi = axios.create({

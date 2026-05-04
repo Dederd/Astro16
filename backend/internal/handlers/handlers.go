@@ -454,8 +454,9 @@ func PaymentNotification(c *gin.Context) {
 	orderID, _ := notification["order_id"].(string)
 	transactionStatus, _ := notification["transaction_status"].(string)
 	transactionID, _ := notification["transaction_id"].(string)
+	customField1, _ := notification["custom_field1"].(string) // session ID untuk quota orders
 
-	log.Printf("[PaymentNotification] order: %s, status: %s", orderID, transactionStatus)
+	log.Printf("[PaymentNotification] order: %s, status: %s, custom_field1: %s", orderID, transactionStatus, customField1)
 
 	var status string
 	switch transactionStatus {
@@ -469,11 +470,24 @@ func PaymentNotification(c *gin.Context) {
 		status = "unknown"
 	}
 
-	if err := services.UpdateOrderStatus(orderID, status, transactionID); err != nil {
-		log.Printf("[PaymentNotification] update error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update status order"})
-		return
+	// Check if this is a quota payment (order_id starts with "QUOTA-")
+	if status == "paid" && customField1 != "" && len(orderID) > 5 && orderID[:6] == "QUOTA-" {
+		log.Printf("[PaymentNotification] Processing quota payment for session: %s", customField1)
+		// Add quota to session
+		if session, err := services.BuyExtraQuota(customField1); err != nil {
+			log.Printf("[PaymentNotification] Error adding quota: %v", err)
+		} else {
+			log.Printf("[PaymentNotification] Quota added successfully. Extra quota: %d", session.ExtraQuota)
+		}
+	} else {
+		// Regular bouquet order
+		if err := services.UpdateOrderStatus(orderID, status, transactionID); err != nil {
+			log.Printf("[PaymentNotification] update error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update status order"})
+			return
+		}
 	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
@@ -804,6 +818,41 @@ func AdminGetStats(c *gin.Context) {
 		"paid_orders":    paidOrders,
 		"pending_orders": pendingOrders,
 		"total_revenue":  totalRevenue.Sum,
+	})
+}
+
+// AdminNotifyNewOrder godoc
+// @Summary      [Admin] Terima notifikasi pesanan baru yang sudah dibayar
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body  body  map[string]interface{}  true  "Order notification data"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/notify-new-order [post]
+func AdminNotifyNewOrder(c *gin.Context) {
+	var req struct {
+		OrderID      string `json:"order_id"`
+		CustomerName string `json:"customer_name"`
+		CustomerPhone string `json:"customer_phone"`
+		TotalAmount  int64  `json:"total_amount"`
+		DesignName   string `json:"design_name"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Log notifikasi ke console/file
+	log.Printf("[ADMIN NOTIF] New paid order: %s | Customer: %s | Phone: %s | Amount: %d | Design: %s\n",
+		req.OrderID, req.CustomerName, req.CustomerPhone, req.TotalAmount, req.DesignName)
+
+	// Di masa depan, bisa simpan ke database atau kirim ke notification system
+	// Untuk sekarang, frontend akan menampilkan notifikasi berdasarkan status order
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Notifikasi diterima",
 	})
 }
 

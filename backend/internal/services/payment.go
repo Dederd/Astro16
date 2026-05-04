@@ -108,6 +108,17 @@ func UpdateOrderShipping(id string, req models.UpdateOrderStatusRequest) error {
 // Generate session (rate limiting)
 // ────────────────────────────────────────────────────────────
 
+// extractUserID tries to extract user ID from session ID (format: "user_{id}")
+func extractUserID(sessionID string) *uint {
+	if len(sessionID) > 5 && sessionID[:5] == "user_" {
+		var uid uint
+		if _, err := fmt.Sscanf(sessionID[5:], "%d", &uid); err == nil && uid > 0 {
+			return &uid
+		}
+	}
+	return nil
+}
+
 func GetOrCreateSession(sessionID string) (*models.GenerateSessionDB, error) {
 	var session models.GenerateSessionDB
 	result := database.DB.First(&session, "session_id = ?", sessionID)
@@ -122,9 +133,22 @@ func GetOrCreateSession(sessionID string) (*models.GenerateSessionDB, error) {
 }
 
 func IncrementGenerateCount(sessionID string) error {
-	return database.DB.Model(&models.GenerateSessionDB{}).
+	// Update session
+	err := database.DB.Model(&models.GenerateSessionDB{}).
 		Where("session_id = ?", sessionID).
 		UpdateColumn("generate_count", database.DB.Raw("generate_count + 1")).Error
+	if err != nil {
+		return err
+	}
+
+	// Also update user account if this is a user session
+	if userID := extractUserID(sessionID); userID != nil {
+		database.DB.Model(&models.UserDB{}).
+			Where("id = ?", *userID).
+			UpdateColumn("free_generate_count", database.DB.Raw("free_generate_count + 1"))
+	}
+
+	return nil
 }
 
 // BuyExtraQuota — tambah 3 kuota generate, catat biaya Rp5.000
@@ -146,6 +170,16 @@ func BuyExtraQuota(sessionID string) (*models.GenerateSessionDB, error) {
 		}).Error
 	if err != nil {
 		return nil, err
+	}
+
+	// Also update user account if this is a user session
+	if userID := extractUserID(sessionID); userID != nil {
+		database.DB.Model(&models.UserDB{}).
+			Where("id = ?", *userID).
+			Updates(map[string]interface{}{
+				"extra_quota":     database.DB.Raw("extra_quota + ?", quotaPerPack),
+				"extra_quota_fee": database.DB.Raw("extra_quota_fee + ?", feePerPack),
+			})
 	}
 
 	// Reload

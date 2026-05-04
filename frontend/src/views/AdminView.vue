@@ -49,6 +49,23 @@
 
     <!-- Main -->
     <main class="admin-main">
+      <!-- Notification alert for new paid orders -->
+      <div v-if="newPaidOrders.length > 0" class="notification-alert">
+        <span class="alert-icon">🔔</span>
+        <div class="alert-content">
+          <strong>{{ newPaidOrders.length }} Pesanan Baru Butuh Diproses!</strong>
+          <p v-for="o in newPaidOrders.slice(0, 3)" :key="o.order_id" class="alert-order">
+            {{ o.customer_name }} - Rp{{ formatPrice(o.total_amount) }}
+          </p>
+          <p v-if="newPaidOrders.length > 3" class="alert-more">
+            +{{ newPaidOrders.length - 3 }} pesanan lainnya
+          </p>
+        </div>
+        <button class="btn btn-sm btn-primary" @click="clearNewOrderNotifications">
+          ✓ Selesai
+        </button>
+      </div>
+
       <!-- Stats dashboard -->
       <div v-if="activeTab === 'dashboard'">
         <h1 class="admin-title">Dashboard</h1>
@@ -452,6 +469,9 @@ const tabs = [
 const stats = ref({})
 const statsLoading = ref(true)
 
+// Notifications
+const newPaidOrders = ref([])
+
 // Orders
 const orders = ref([])
 const ordersLoading = ref(true)
@@ -507,7 +527,23 @@ async function loadStats() {
 
 async function loadOrders() {
   ordersLoading.value = true
-  try { const r = await adminGetOrders(); orders.value = r.data.data || [] } catch { /* ignore */ } finally { ordersLoading.value = false }
+  try { 
+    const r = await adminGetOrders()
+    orders.value = r.data.data || []
+    
+    // Check for new paid orders (status = 'paid')
+    const paidOrders = orders.value.filter(o => o.status === 'paid')
+    if (paidOrders.length > 0) {
+      // Load from sessionStorage to get newly notified orders
+      const storedNotified = JSON.parse(sessionStorage.getItem('notified_order_ids') || '[]')
+      const newOrders = paidOrders.filter(o => !storedNotified.includes(o.id))
+      if (newOrders.length > 0) {
+        newPaidOrders.value = newOrders
+      }
+    }
+  } catch { /* ignore */ } finally { 
+    ordersLoading.value = false 
+  }
 }
 
 async function loadFlowers() {
@@ -521,6 +557,14 @@ async function loadCatalog() {
 }
 
 function viewOrderDetail(order) { selectedOrder.value = order }
+
+function clearNewOrderNotifications() {
+  // Mark these orders as notified
+  const storedNotified = JSON.parse(sessionStorage.getItem('notified_order_ids') || '[]')
+  const newNotified = [...new Set([...storedNotified, ...newPaidOrders.value.map(o => o.order_id || o.id)])]
+  sessionStorage.setItem('notified_order_ids', JSON.stringify(newNotified))
+  newPaidOrders.value = []
+}
 
 async function updateOrderStatus(order, newStatus) {
   try {
@@ -665,6 +709,47 @@ function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
 .admin-main { flex: 1; padding: 32px; overflow-y: auto; max-height: 100vh; }
 .admin-title { font-size: 1.6rem; color: var(--charcoal); margin-bottom: 24px; }
 .section-header-main { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; }
+
+/* Notification Alert */
+.notification-alert {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #FFE5E5 0%, #FFF0E5 100%);
+  border: 2px solid #FF6B6B;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.1);
+}
+.alert-icon {
+  font-size: 1.5rem;
+  animation: pulse 2s infinite;
+}
+.alert-content {
+  flex: 1;
+}
+.alert-content strong {
+  display: block;
+  font-size: 1rem;
+  color: #D32F2F;
+  margin-bottom: 8px;
+}
+.alert-order {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: #C62828;
+}
+.alert-more {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #E53935;
+  font-style: italic;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 
 /* Stats */
 .loading-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }

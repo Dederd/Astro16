@@ -10,7 +10,7 @@
         <div class="nav-links">
           <router-link to="/" class="nav-link hide-mobile">Beranda</router-link>
           <router-link to="/catalog" class="nav-link catalog-link">Katalog</router-link>
-          <router-link to="/order" class="btn btn-primary btn-nav">Buat Bouquet</router-link>
+          <router-link to="/order" class="btn btn-primary btn-nav"><span class="btn-text-long">Buat Bouquet</span><span class="btn-text-short">Buat</span></router-link>
 
           <!-- Auth area -->
           <div v-if="authStore.isLoggedIn" class="user-menu" ref="userMenuRef">
@@ -146,7 +146,8 @@ provide('openAuth', openAuth)
   color: var(--deep-rose);
   letter-spacing: 0.02em;
 }
-.nav-links { display: flex; align-items: center; gap: 16px; }
+.nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.btn-text-short { display: none; }
 .nav-link {
   font-size: 0.88rem;
   color: var(--warm-gray);
@@ -231,20 +232,29 @@ main.main-admin { padding: 0; }
 
 /* ── Mobile navbar responsive ── */
 @media (max-width: 640px) {
-  .navbar-inner { height: 52px; }
-  .logo-text { font-size: 1.2rem; }
+  .navbar-inner {
+    height: 56px;
+    padding: 0 12px;
+  }
+  .logo {
+    flex-shrink: 0;
+    gap: 6px;
+  }
+  .logo-icon { font-size: 1.2rem; }
+  .logo-text { font-size: 1rem; }
 
-  .nav-links { gap: 6px; }
+  .nav-links { gap: 8px; }
   .hide-mobile { display: none; }  /* sembunyikan Beranda */
 
   /* Katalog tetap tampil di mobile */
   .catalog-link {
     display: inline-flex !important;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     padding: 6px 10px;
     border: 1px solid var(--blush);
     border-radius: var(--radius-pill);
     color: var(--deep-rose);
+    white-space: nowrap;
   }
   .catalog-link.router-link-active {
     background: var(--cream);
@@ -252,15 +262,53 @@ main.main-admin { padding: 0; }
   }
 
   .btn-nav {
-    padding: 8px 12px;
-    font-size: 0.78rem;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
+  .btn-text-long { display: inline; }
+  .btn-text-short { display: none; }
 
   .user-name { display: none; }
-  .user-btn { padding: 5px 10px 5px 5px; }
+  .user-btn {
+    padding: 4px 8px 4px 4px;
+    gap: 4px;
+  }
+  .user-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.65rem;
+  }
+  .chevron { display: none; }
 
-  main { padding: 0; min-height: calc(100vh - 52px - 80px); }
+  main { padding: 0; min-height: calc(100vh - 56px - 80px); }
   .footer { margin-top: 40px; padding: 28px 0; }
+}
+
+/* ── Extra small mobile (< 480px) ── */
+@media (max-width: 480px) {
+  .navbar-inner {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .logo-icon { font-size: 1rem; }
+  .logo-text { font-size: 0.9rem; }
+
+  .nav-links { gap: 6px; }
+  .catalog-link {
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+
+  .btn-nav {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+  .btn-text-long { display: none; }
+  .btn-text-short { display: inline; }
+
+  main { padding: 0; min-height: calc(100vh - 52px - 70px); }
 }
 
 </style>

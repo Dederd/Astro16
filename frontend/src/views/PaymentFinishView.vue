@@ -133,7 +133,7 @@
     <!-- Actions -->
     <div class="finish-actions">
       <button class="btn btn-primary" @click="$router.push('/')">🏠 Kembali ke Beranda</button>
-      <button class="btn btn-outline" @click="$router.push('/my-orders')">📦 Lihat Pesanan Saya</button>
+      <button class="btn btn-outline" @click="$router.push({ path: '/my-orders', query: { order_id: orderId } })">📦 Lihat Pesanan Saya</button>
       <InvoiceDownload v-if="order && status === 'success'" :order="order" />
     </div>
   </div>

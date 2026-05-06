@@ -808,9 +808,11 @@ func AdminGetStats(c *gin.Context) {
 	var totalRevenue struct{ Sum int64 }
 
 	database.DB.Model(&models.OrderDB{}).Count(&totalOrders)
-	database.DB.Model(&models.OrderDB{}).Where("status = 'paid'").Count(&paidOrders)
-	database.DB.Model(&models.OrderDB{}).Where("status = 'pending'").Count(&pendingOrders)
-	database.DB.Model(&models.OrderDB{}).Where("status = 'paid'").
+	// Count orders with status != 'pending' as paid (includes shipped, delivered, processing, etc)
+	database.DB.Model(&models.OrderDB{}).Where("status != ?", "pending").Count(&paidOrders)
+	database.DB.Model(&models.OrderDB{}).Where("status = ?", "pending").Count(&pendingOrders)
+	// Sum revenue for all non-pending orders
+	database.DB.Model(&models.OrderDB{}).Where("status != ?", "pending").
 		Select("COALESCE(SUM(total_amount), 0) as sum").Scan(&totalRevenue)
 
 	c.JSON(http.StatusOK, gin.H{

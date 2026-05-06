@@ -218,6 +218,17 @@
             <div class="form-group" style="grid-column: span 2">
               <label class="form-label">URL Gambar</label>
               <input v-model="flowerForm.image_url" class="form-input" placeholder="https://..." />
+              <!-- Image preview -->
+              <div v-if="flowerForm.image_url" class="image-preview-wrapper" style="margin-top: 12px;">
+                <img
+                  :src="flowerForm.image_url"
+                  :alt="flowerForm.name"
+                  class="image-preview"
+                  @error="flowerImgError = true"
+                  @load="flowerImgError = false"
+                />
+                <span v-if="flowerImgError" class="preview-error">❌ Gambar tidak bisa dimuat (URL mungkin tidak valid atau expired)</span>
+              </div>
             </div>
             <div class="form-group" style="grid-column: span 2">
               <label class="form-label">Makna</label>
@@ -320,6 +331,17 @@
             <div class="form-group" style="grid-column: span 2">
               <label class="form-label">URL Gambar</label>
               <input v-model="catalogForm.image_url" class="form-input" placeholder="https://..." />
+              <!-- Image preview -->
+              <div v-if="catalogForm.image_url" class="image-preview-wrapper" style="margin-top: 12px;">
+                <img
+                  :src="catalogForm.image_url"
+                  :alt="catalogForm.name"
+                  class="image-preview"
+                  @error="catalogImgError = true"
+                  @load="catalogImgError = false"
+                />
+                <span v-if="catalogImgError" class="preview-error">❌ Gambar tidak bisa dimuat (URL mungkin tidak valid atau expired)</span>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Style</label>
@@ -420,7 +442,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import {
   adminGetStats, adminGetOrders, adminUpdateOrder,
   adminGetFlowers, adminCreateFlower, adminUpdateFlower, adminDeleteFlower,
@@ -483,6 +505,7 @@ const flowersLoading = ref(true)
 const savedFlowers = ref({})
 const showFlowerForm = ref(false)
 const flowerForm = ref(defaultFlowerForm())
+const flowerImgError = ref(false)
 
 function defaultFlowerForm() {
   return { id: '', name: '', name_id: '', emoji: '🌸', price: 10000, stock: 100, description: '', image_url: '', meaning: '', is_available: true }
@@ -494,6 +517,7 @@ const catalogLoading = ref(true)
 const showCatalogForm = ref(false)
 const editingCatalog = ref(null)
 const catalogForm = ref(defaultCatalogForm())
+const catalogImgError = ref(false)
 
 const styles = ['Classic', 'Premium', 'Romantic', 'Playful', 'Elegant', 'Warm', 'Modern', 'Natural']
 const occasions = [
@@ -511,10 +535,23 @@ function defaultCatalogForm() {
   return { id: '', name: '', description: '', image_url: '', style: 'Classic', occasion: 'graduation', price: 0, stem_count: 0, stock: 10, sort_order: 0, is_available: true }
 }
 
+let pollInterval = null
+
 onMounted(async () => {
   checkAuth()
-  if (isAuthenticated.value) await loadAll()
+  if (isAuthenticated.value) {
+    await loadAll()
+    // Poll setiap 30 detik untuk notifikasi pesanan baru yang paid
+    pollInterval = setInterval(async () => {
+      await Promise.all([loadOrders(), loadStats()])
+    }, 30000)
+  }
 })
+
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
+
 
 async function loadAll() {
   await Promise.all([loadStats(), loadOrders(), loadFlowers(), loadCatalog()])
@@ -963,4 +1000,31 @@ function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
   font-size: 0.85rem;
 }
 .btn-full { width: 100%; justify-content: center; }
+
+/* Image preview in forms */
+.image-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #F5F5F5;
+  border-radius: 8px;
+  border: 1px solid #E0E0E0;
+}
+.image-preview {
+  max-height: 180px;
+  max-width: 100%;
+  border-radius: 6px;
+  object-fit: contain;
+  background: white;
+  border: 1px solid #DDD;
+}
+.preview-error {
+  font-size: 0.8rem;
+  color: #C62828;
+  padding: 8px;
+  background: #FFF3F3;
+  border-radius: 4px;
+  text-align: center;
+}
 </style>

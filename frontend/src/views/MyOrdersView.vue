@@ -146,17 +146,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { getUserOrders } from '@/services/api'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { getUserOrders, getOrder } from '@/services/api'
 
 const router = useRouter()
+const route = useRoute()
 const orders = ref([])
 const loading = ref(true)
 const loadError = ref(false)
 const expandedId = ref(null)
 
-onMounted(async () => {
+async function loadOrders() {
+  loading.value = true
+  loadError.value = false
   try {
     const res = await getUserOrders()
     orders.value = (res.data.data || []).sort((a, b) =>
@@ -167,6 +170,40 @@ onMounted(async () => {
     loadError.value = true
   } finally {
     loading.value = false
+  }
+}
+
+// Jika ada order_id dari query (setelah payment), pastikan status sudah terupdate
+async function checkAndRefreshPaidOrder(orderId) {
+  if (!orderId) return
+  try {
+    const res = await getOrder(orderId)
+    const freshOrder = res.data.data
+    if (freshOrder) {
+      const idx = orders.value.findIndex(o => o.id === orderId)
+      if (idx !== -1) {
+        orders.value[idx] = freshOrder
+      } else {
+        await loadOrders()
+      }
+    }
+  } catch (e) {
+    console.error('[MyOrders] gagal refresh order:', e)
+  }
+}
+
+onMounted(async () => {
+  await loadOrders()
+  // Jika navigasi dari halaman payment finish, refresh order terkait
+  if (route.query.order_id) {
+    await checkAndRefreshPaidOrder(route.query.order_id)
+  }
+})
+
+// Watch jika query berubah (misal user kembali ke halaman ini)
+watch(() => route.query.order_id, async (newId) => {
+  if (newId) {
+    await checkAndRefreshPaidOrder(newId)
   }
 })
 

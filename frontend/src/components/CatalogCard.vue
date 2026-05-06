@@ -7,8 +7,8 @@
     <!-- Image -->
     <div class="catalog-img-wrap" :style="`background: ${gradientFor(item.style)}`">
       <img
-        v-if="item.image_url"
-        :src="item.image_url"
+        v-if="item.image_url && !imgError"
+        :src="resolveImageUrl(item.image_url)"
         :alt="item.name"
         class="catalog-img"
         @error="imgError = true"
@@ -63,6 +63,22 @@ const props = defineProps({
 defineEmits(['select'])
 
 const imgError = ref(false)
+
+// Convert Google Drive share/view URL to direct thumbnail URL
+function resolveImageUrl(url) {
+  if (!url) return url
+  // Handle drive.google.com/uc?export=view&id=FILE_ID
+  const ucMatch = url.match(/drive\.google\.com\/uc\?.*[&?]id=([^&]+)/)
+  if (ucMatch) {
+    return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=w600`
+  }
+  // Handle drive.google.com/file/d/FILE_ID/view
+  const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
+  if (fileMatch) {
+    return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w600`
+  }
+  return url
+}
 
 const occasionMap = {
   graduation: '🎓 Wisuda',

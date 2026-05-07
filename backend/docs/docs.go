@@ -1035,11 +1035,18 @@ const docTemplate = `{
                 "bouquet_type_id": {
                     "type": "string"
                 },
+                "description_hint": {
+                    "type": "string"
+                },
                 "selected_flowers": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.SelectedFlower"
                     }
+                },
+                "style_hint": {
+                    "description": "Optional hints from user",
+                    "type": "string"
                 },
                 "total_stem_count": {
                     "description": "Total stem count from user's actual selection — used to sync AI output",

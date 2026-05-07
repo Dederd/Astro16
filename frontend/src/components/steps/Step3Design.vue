@@ -238,6 +238,8 @@ async function generate() {
       bouquet_type_id: store.selectedBouquetType.id,
       selected_flowers: store.selectedFlowers,
       total_stem_count: totalStemCount,
+      style_hint: store.aiStyleHint || undefined,
+      description_hint: store.aiDescriptionHint || undefined,
     })
 
     const { designs, message } = res.data.data

@@ -168,6 +168,9 @@ type GenerateBouquetRequest struct {
 	SelectedFlowers []SelectedFlower `json:"selected_flowers"`
 	// Total stem count from user's actual selection — used to sync AI output
 	TotalStemCount int `json:"total_stem_count"`
+	// Optional hints from user
+	StyleHint       string `json:"style_hint"`
+	DescriptionHint string `json:"description_hint"`
 }
 
 type BouquetDesign struct {

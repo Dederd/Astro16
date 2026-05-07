@@ -277,10 +277,14 @@ func saveDesignCache(cacheKey, bouquetTypeID string, flowers []models.SelectedFl
 // ────────────────────────────────────────────────────────────
 
 func Agent2GenerateBouquet(req models.GenerateBouquetRequest) (*models.GenerateBouquetResponse, error) {
-	// ── Cache lookup: jika kombinasi bunga sama, pakai hasil lama ──
+	// ── Cache lookup: jika kombinasi bunga sama dan tidak ada hint, pakai hasil lama ──
 	cacheKey := buildCacheKey(req.BouquetTypeID, req.SelectedFlowers)
-	if cached, ok := lookupDesignCache(cacheKey); ok {
-		return cached, nil
+	// Skip cache jika user memberikan style/description hint (agar AI customisasi)
+	hasHints := req.StyleHint != "" || req.DescriptionHint != ""
+	if !hasHints {
+		if cached, ok := lookupDesignCache(cacheKey); ok {
+			return cached, nil
+		}
 	}
 
 	allFlowers := GetAllFlowers()
@@ -335,8 +339,21 @@ func Agent2GenerateBouquet(req models.GenerateBouquetRequest) (*models.GenerateB
 PENTING: Jawab HANYA dengan JSON murni. Jangan gunakan markdown, jangan ada teks sebelum atau sesudah JSON.
 Stem count harus SAMA PERSIS dengan nilai yang diberikan di prompt — jangan mengubah angka tersebut.`
 
+	// Build optional hints section
+	var hintsSection string
+	if req.StyleHint != "" || req.DescriptionHint != "" {
+		hintsSection = "\n\nPreferensi khusus dari customer:"
+		if req.StyleHint != "" {
+			hintsSection += fmt.Sprintf("\n- Gaya yang diinginkan: %s", req.StyleHint)
+		}
+		if req.DescriptionHint != "" {
+			hintsSection += fmt.Sprintf("\n- Deskripsi/konteks tambahan: %s", req.DescriptionHint)
+		}
+		hintsSection += "\nSesuaikan nama, deskripsi, dan gaya desain dengan preferensi ini."
+	}
+
 	userPrompt := fmt.Sprintf(`Buat 3 desain bouquet berbeda untuk acara %s dengan bunga pilihan customer:
-%s
+%s%s
 
 Total tangkai yang dipilih customer: %d tangkai
 Harga paket Mini: Rp%d (untuk %d tangkai — JANGAN UBAH angka ini)
@@ -375,7 +392,7 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
     }
   ]
 }`,
-		bouquetTypeName, flowerDetails.String(), totalStemCount,
+		bouquetTypeName, flowerDetails.String(), hintsSection, totalStemCount,
 		priceSmall, stemSmall,
 		priceLarge, stemLarge,
 		// design_1

@@ -99,10 +99,15 @@ definitions:
     properties:
       bouquet_type_id:
         type: string
+      description_hint:
+        type: string
       selected_flowers:
         items:
           $ref: '#/definitions/models.SelectedFlower'
         type: array
+      style_hint:
+        description: Optional hints from user
+        type: string
       total_stem_count:
         description: Total stem count from user's actual selection — used to sync
           AI output

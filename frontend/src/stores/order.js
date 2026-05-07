@@ -24,6 +24,10 @@ export const useOrderStore = defineStore('order', () => {
   const extraQuota = ref(0)
   const extraQuotaFee = ref(0)
 
+  // Optional AI prompt hints (from Step 2)
+  const aiStyleHint = ref('')
+  const aiDescriptionHint = ref('')
+
   // Catalog mode
   const orderMode = ref('ai') // 'ai' | 'catalog'
   const selectedCatalogItem = ref(null)
@@ -198,6 +202,8 @@ export const useOrderStore = defineStore('order', () => {
     shippingCost.value = 0
     extraQuota.value = 0
     extraQuotaFee.value = 0
+    aiStyleHint.value = ''
+    aiDescriptionHint.value = ''
   }
 
   return {
@@ -205,6 +211,7 @@ export const useOrderStore = defineStore('order', () => {
     recommendedFlowerIds, selectedFlowers, generatedDesigns, designMessage,
     selectedDesign, selectedSize, generateCount, generateLimit,
     extraQuota, extraQuotaFee,
+    aiStyleHint, aiDescriptionHint,
     orderMode, selectedCatalogItem, createdOrder, totalPrice, flowerCount,
     isGenerateLimited, sessionId, aiFeePaid, shippingCost, priceBreakdown,
     MAKING_FEE, AI_FEE,

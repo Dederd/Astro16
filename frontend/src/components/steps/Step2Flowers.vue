@@ -74,6 +74,30 @@
             </span>
           </div>
         </div>
+
+        <!-- Optional style & description inputs -->
+        <div class="ai-prompt-inputs">
+          <div class="prompt-input-row">
+            <label class="prompt-label">🎨 Gaya Desain <span class="optional-tag">opsional</span></label>
+            <input
+              v-model="store.aiStyleHint"
+              class="prompt-input"
+              placeholder="Contoh: Romantic, Minimalist, Rustic, Elegant..."
+              maxlength="100"
+            />
+          </div>
+          <div class="prompt-input-row">
+            <label class="prompt-label">📝 Deskripsi Tambahan <span class="optional-tag">opsional</span></label>
+            <textarea
+              v-model="store.aiDescriptionHint"
+              class="prompt-textarea"
+              placeholder="Contoh: Untuk ulang tahun ibu, suasana hangat dan penuh kasih sayang..."
+              maxlength="300"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+
         <div class="summary-actions">
           <button class="btn btn-ghost btn-sm" @click="store.setStep(1)">← Kembali</button>
           <button class="btn btn-primary" @click="store.setStep(3)">Generate Desain →</button>
@@ -257,6 +281,65 @@ const displayFlowers = computed(() => {
   padding: 2px 10px;
   border-radius: var(--radius-pill);
   font-size: 0.75rem;
+}
+
+/* AI Prompt inputs */
+.ai-prompt-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--blush);
+  margin-top: 12px;
+}
+
+.prompt-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prompt-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--charcoal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.optional-tag {
+  font-size: 0.68rem;
+  color: var(--warm-gray);
+  font-weight: 400;
+  background: var(--light-gray);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+
+.prompt-input,
+.prompt-textarea {
+  width: 100%;
+  border: 1.5px solid var(--light-gray);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.83rem;
+  color: var(--charcoal);
+  background: var(--white);
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.prompt-input:focus,
+.prompt-textarea:focus {
+  outline: none;
+  border-color: var(--rose);
+}
+
+.prompt-textarea {
+  resize: none;
+  line-height: 1.5;
 }
 
 .summary-actions { display: flex; gap: 10px; align-items: center; }

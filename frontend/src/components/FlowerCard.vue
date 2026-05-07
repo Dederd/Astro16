@@ -14,8 +14,8 @@
     <!-- Image area -->
     <div class="flower-img-wrap">
       <img
-        v-if="flower.image_url"
-        :src="flower.image_url"
+        v-if="flower.image_url && !imgError"
+        :src="resolveImageUrl(flower.image_url)"
         :alt="flower.name_id"
         class="flower-img"
         @error="imgError = true"
@@ -73,6 +73,16 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle', 'update-qty'])
 const imgError = ref(false)
+
+// Convert Google Drive share/view URL to direct thumbnail URL
+function resolveImageUrl(url) {
+  if (!url) return url
+  const ucMatch = url.match(/drive\.google\.com\/uc\?.*[&?]id=([^&]+)/)
+  if (ucMatch) return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=w400`
+  const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
+  if (fileMatch) return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w400`
+  return url
+}
 
 const flowerEmoji = computed(() => {
   const map = {

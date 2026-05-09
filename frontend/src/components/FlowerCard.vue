@@ -39,9 +39,6 @@
         </span>
       </div>
       <p class="flower-meaning">{{ flower.meaning }}</p>
-      <div class="flower-price">Rp{{ formatPrice(flower.price) }}/tangkai</div>
-
-      <!-- Colors -->
       <div class="flower-colors">
         <span
           v-for="color in flower.colors"

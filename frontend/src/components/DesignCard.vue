@@ -47,7 +47,6 @@
       <!-- Active size details -->
       <div v-if="isSelected && activeVariant" class="size-detail">
         <div class="size-detail-row">
-          <span>{{ activeVariant.stem_count }} tangkai</span>
           <span class="size-price">Rp{{ formatPrice(activeVariant.price) }}</span>
         </div>
         <p class="size-desc-text">{{ activeVariant.description }}</p>

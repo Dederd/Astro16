@@ -347,6 +347,7 @@ ATURAN WAJIB - SANGAT PENTING:
 - SEMUA bunga yang dipilih customer HARUS ada dalam bouquet. Tidak boleh ada yang dihilangkan.
 - Bunga pilihan customer adalah KOMPONEN UTAMA bouquet - ornamen/filler hanya pelengkap tambahan
 - Sebutkan setiap bunga pilihan customer secara eksplisit dalam description dan image_prompt
+- JANGAN pernah menyebut kata "tangkai" dalam message, name, description, atau style - fokus pada bunga dan bouquet saja
 - Jawab HANYA dengan JSON murni tanpa markdown
 - Stem count harus SAMA dengan nilai di prompt - jangan ubah
 - Image prompt harus DETAILED dan SPESIFIK untuk generate image berkualitas tinggi`

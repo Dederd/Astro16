@@ -28,10 +28,6 @@
 
       <div class="catalog-meta">
         <div class="meta-item">
-          <span class="meta-icon">🌸</span>
-          <span>{{ item.stem_count }} tangkai</span>
-        </div>
-        <div class="meta-item">
           <span class="meta-icon">🎨</span>
           <span>{{ item.style }}</span>
         </div>

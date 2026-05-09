@@ -5,13 +5,14 @@
     @click="item.is_available && $emit('select', item)"
   >
     <!-- Image -->
-    <div class="catalog-img-wrap" :style="`background: ${gradientFor(item.style)}`">
+    <div class="catalog-img-wrap" :style="`background: ${gradientFor(item.style)}`" @click.stop="openImageZoom">
       <img
         v-if="item.image_url && !imgError"
         :src="resolveImageUrl(item.image_url)"
         :alt="item.name"
         class="catalog-img"
         @error="imgError = true"
+        style="cursor: pointer;"
       />
       <div v-if="!item.image_url || imgError" class="catalog-emoji">
         {{ emojiFor(item.style) }}
@@ -50,10 +51,18 @@
       </div>
     </div>
   </div>
+
+  <ImageZoomModal
+    :is-open="showImageZoom"
+    :image-url="resolveImageUrl(item.image_url)"
+    :image-alt="item.name"
+    @close="showImageZoom = false"
+  />
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import ImageZoomModal from './ImageZoomModal.vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -63,6 +72,7 @@ const props = defineProps({
 defineEmits(['select'])
 
 const imgError = ref(false)
+const showImageZoom = ref(false)
 
 // Convert Google Drive share/view URL to direct thumbnail URL
 function resolveImageUrl(url) {
@@ -111,6 +121,12 @@ function emojiFor(style) {
 }
 
 function formatPrice(p) { return (p || 0).toLocaleString('id-ID') }
+
+function openImageZoom() {
+  if (props.item.image_url && !imgError.value) {
+    showImageZoom.value = true
+  }
+}
 </script>
 
 <style scoped>

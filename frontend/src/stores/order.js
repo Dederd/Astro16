@@ -12,7 +12,7 @@ export const useOrderStore = defineStore('order', () => {
   const recommendedFlowerIds = ref([])
 
   // Step 2: Selected flowers
-  const selectedFlowers = ref([]) // [{flower_id, name, quantity}]
+  const selectedFlowers = ref([]) // [{flower_id, name, quantity: 1}, ...]
 
   // Step 3: Generated designs
   const generatedDesigns = ref([])
@@ -52,14 +52,8 @@ export const useOrderStore = defineStore('order', () => {
   // Apakah generate ini berbayar (user sudah habis kuota gratis)
   const aiFeePaid = ref(false)   // di-set dari response AgentGenerateBouquet
 
-  // Harga bunga per tangkai × jumlah tangkai
-  const flowerCost = computed(() => {
-    if (orderMode.value === 'catalog') return 0
-    return selectedFlowers.value.reduce((sum, f) => {
-      const price = f.price_per_stem || 0
-      return sum + price * f.quantity
-    }, 0)
-  })
+  // Harga sekarang flat dari design (mini 35k, premium 75k)
+  const flowerCost = computed(() => 0)
 
   const shippingCost = ref(0) // di-set saat user pilih kurir
 
@@ -101,9 +95,7 @@ export const useOrderStore = defineStore('order', () => {
     }
   })
 
-  const flowerCount = computed(() =>
-    selectedFlowers.value.reduce((sum, f) => sum + f.quantity, 0)
-  )
+  const flowerCount = computed(() => selectedFlowers.value.length)
 
   const isGenerateLimited = computed(() =>
     generateCount.value >= generateLimit.value
@@ -135,24 +127,8 @@ export const useOrderStore = defineStore('order', () => {
     }
   }
 
-  function updateFlowerQuantity(flowerId, quantity) {
-    const f = selectedFlowers.value.find(f => f.flower_id === flowerId)
-    if (f) {
-      if (quantity <= 0) {
-        selectedFlowers.value = selectedFlowers.value.filter(f => f.flower_id !== flowerId)
-      } else {
-        f.quantity = quantity
-      }
-    }
-  }
-
   function isFlowerSelected(flowerId) {
     return selectedFlowers.value.some(f => f.flower_id === flowerId)
-  }
-
-  function getFlowerQuantity(flowerId) {
-    const f = selectedFlowers.value.find(f => f.flower_id === flowerId)
-    return f ? f.quantity : 0
   }
 
   function setGeneratedDesigns(designs, message, count, limit) {
@@ -216,7 +192,7 @@ export const useOrderStore = defineStore('order', () => {
     isGenerateLimited, sessionId, aiFeePaid, shippingCost, priceBreakdown,
     MAKING_FEE, AI_FEE,
     setStep, selectBouquetType, setAgentResponse, toggleFlower,
-    updateFlowerQuantity, isFlowerSelected, getFlowerQuantity,
+    isFlowerSelected,
     setGeneratedDesigns, selectDesign, setOrderMode, selectCatalogItem,
     setCreatedOrder, setAIFeePaid, setShippingCost, setExtraQuota, reset,
   }

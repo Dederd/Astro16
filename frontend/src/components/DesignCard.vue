@@ -57,13 +57,11 @@
       <div v-if="!isSelected" class="sizes-preview">
         <div class="size-preview-item" @click="$emit('select', design, 'small')">
           <span class="size-preview-label">{{ design.small.label }}</span>
-          <span class="size-preview-detail">{{ design.small.stem_count }} tangkai</span>
           <span class="size-preview-price">Rp{{ formatPrice(design.small.price) }}</span>
         </div>
         <div class="size-preview-divider"></div>
         <div class="size-preview-item" @click="$emit('select', design, 'large')">
           <span class="size-preview-label">{{ design.large.label }}</span>
-          <span class="size-preview-detail">{{ design.large.stem_count }} tangkai</span>
           <span class="size-preview-price">Rp{{ formatPrice(design.large.price) }}</span>
         </div>
       </div>

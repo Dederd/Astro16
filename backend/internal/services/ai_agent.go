@@ -343,7 +343,10 @@ PRINSIP DESAIN BOUQUETMU:
 4. WRAPPING: Selalu gunakan elegant wrapping - kraft paper dengan ribbon atau silk paper yang sophisticated
 5. DETAIL: Tambahkan greenery (eucalyptus, ruscus, salal) untuk depth dan texture yang indah
 
-PENTING: 
+ATURAN WAJIB - SANGAT PENTING:
+- SEMUA bunga yang dipilih customer HARUS ada dalam bouquet. Tidak boleh ada yang dihilangkan.
+- Bunga pilihan customer adalah KOMPONEN UTAMA bouquet - ornamen/filler hanya pelengkap tambahan
+- Sebutkan setiap bunga pilihan customer secara eksplisit dalam description dan image_prompt
 - Jawab HANYA dengan JSON murni tanpa markdown
 - Stem count harus SAMA dengan nilai di prompt - jangan ubah
 - Image prompt harus DETAILED dan SPESIFIK untuk generate image berkualitas tinggi`
@@ -361,7 +364,7 @@ PENTING:
 	}
 
 	userPrompt := fmt.Sprintf(`Desain bouquet untuk acara: %s
-Bunga pilihan customer:
+Bunga pilihan customer (SEMUA HARUS ADA dalam bouquet):
 %s%s
 
 TECHNICAL REQUIREMENTS:
@@ -369,20 +372,21 @@ TECHNICAL REQUIREMENTS:
 - Mini Bouquet: Rp%d untuk %d stem (balance antara beauty dan size)
 - Premium Bouquet: Rp%d untuk %d stem (lebih voluminous)
 
-Buat 1 desain bouquet TERBAIK dengan prinsip design florist profesional.
-Tambahkan baby's breath atau eucalyptus untuk filler dan texture.
+WAJIB: Buat 1 desain bouquet yang menggunakan SEMUA bunga di atas sebagai komponen utama.
+Kamu boleh menambahkan baby's breath, eucalyptus, atau greenery lain sebagai filler pelengkap.
+Tapi SEMUA bunga pilihan customer harus disebutkan dan ada di bouquet.
 Wrapping elegant dengan color yang cocok.
 
 Jawab ONLY dengan JSON (no markdown):
 {
-  "message": "Pesan inspirasi 2-3 kalimat yang mengkaitkan bunga, momen, dan design bouquet",
+  "message": "Pesan inspirasi 2-3 kalimat yang menyebut semua bunga pilihan, momen, dan design bouquet",
   "designs": [
     {
       "id": "design_1",
       "name": "Nama design (3-4 kata bahasa Indonesia yang elegan)",
-      "description": "Deskripsi design 1-2 kalimat - jelaskan focal point, color palette, dan overall feel",
+      "description": "Deskripsi design 1-2 kalimat - jelaskan semua bunga pilihan, focal point, color palette, dan overall feel",
       "style": "Style description (contoh: Romantic Modern, Minimalist Elegant, Luxe Glamour)",
-      "image_prompt": "professional florist bouquet with [flower names] arranged in [arrangement style], elegant [color] wrapping, premium quality, professional photography, studio lighting, white background, flowers are fresh and vibrant, composition is balanced, perfect for [occasion]",
+      "image_prompt": "professional florist bouquet with [LIST ALL SELECTED FLOWERS BY NAME] arranged in [arrangement style], elegant [color] wrapping, premium quality, professional photography, studio lighting, white background, flowers are fresh and vibrant, composition is balanced, perfect for [occasion]",
       "small": {
         "label": "Mini Bouquet",
         "price": %d,

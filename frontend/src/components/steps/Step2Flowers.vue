@@ -50,9 +50,7 @@
         :flower="flower"
         :is-selected="store.isFlowerSelected(flower.id)"
         :is-recommended="store.recommendedFlowerIds.includes(flower.id)"
-        :quantity="store.getFlowerQuantity(flower.id)"
         @toggle="store.toggleFlower"
-        @update-qty="store.updateFlowerQuantity"
       />
     </div>
 
@@ -67,10 +65,10 @@
     <transition name="slide-up">
       <div v-if="store.selectedFlowers.length > 0" class="selection-summary">
         <div class="summary-info">
-          <span class="summary-count">{{ store.flowerCount }} tangkai dipilih</span>
+          <span class="summary-count">{{ store.selectedFlowers.length }} bunga dipilih</span>
           <div class="summary-flowers">
             <span v-for="f in store.selectedFlowers" :key="f.flower_id" class="summary-tag">
-              {{ f.name }} × {{ f.quantity }}
+              {{ f.name }}
             </span>
           </div>
         </div>

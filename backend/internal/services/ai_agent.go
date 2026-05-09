@@ -311,15 +311,15 @@ func Agent2GenerateBouquet(req models.GenerateBouquetRequest) (*models.GenerateB
 		totalStemCount = req.TotalStemCount
 	}
 
-	// Harga paket:
-	// Mini  = harga bunga yg dipilih + packaging Rp30.000
-	// Premium = (harga bunga × 2) + packaging Rp75.000
-	priceSmall := totalFlowerPrice + 30000
-	priceLarge := totalFlowerPrice*2 + 75000
+	// Harga paket FLAT:
+	// Mini  = Rp35.000
+	// Premium = Rp75.000
+	const priceSmall int64 = 35000
+	const priceLarge int64 = 75000
 
 	// Stem count:
-	// Mini  = total tangkai user
-	// Premium = total tangkai user × 2 (lebih lebat)
+	// Mini  = total bunga user
+	// Premium = total bunga user × 2 (lebih lebat)
 	stemSmall := totalStemCount
 	stemLarge := totalStemCount * 2
 
@@ -335,42 +335,66 @@ func Agent2GenerateBouquet(req models.GenerateBouquetRequest) (*models.GenerateB
 		bouquetTypeName = req.BouquetTypeID
 	}
 
-	system := `Kamu adalah desainer bouquet bunga profesional dari Indonesia.
-PENTING: Jawab HANYA dengan JSON murni. Jangan gunakan markdown, jangan ada teks sebelum atau sesudah JSON.
-Stem count harus SAMA PERSIS dengan nilai yang diberikan di prompt — jangan mengubah angka tersebut.`
+	system := `Kamu adalah desainer florist profesional berpengalaman dari Indonesia dengan keahlian menciptakan bouquet yang elegan dan balance.
+PRINSIP DESAIN BOUQUETMU:
+1. KOMPOSISI: Buat focal point dengan bunga utama (rose, peony) di tengah, dikelilingi bunga sekunder, dan baby's breath/eucalyptus sebagai filler
+2. WARNA: Pilih palette yang harmonis - kombinasi warna warm (pink, peach, red) atau cool (white, purple) yang cocok dengan bunga pilihan
+3. VOLUME: Mini = bunga padat namun elegant, Premium = lebih voluminous dan mewah dengan layer yang dalam
+4. WRAPPING: Selalu gunakan elegant wrapping - kraft paper dengan ribbon atau silk paper yang sophisticated
+5. DETAIL: Tambahkan greenery (eucalyptus, ruscus, salal) untuk depth dan texture yang indah
+
+PENTING: 
+- Jawab HANYA dengan JSON murni tanpa markdown
+- Stem count harus SAMA dengan nilai di prompt - jangan ubah
+- Image prompt harus DETAILED dan SPESIFIK untuk generate image berkualitas tinggi`
 
 	// Build optional hints section
 	var hintsSection string
 	if req.StyleHint != "" || req.DescriptionHint != "" {
-		hintsSection = "\n\nPreferensi khusus dari customer:"
+		hintsSection = "\n\nPreferensi Customer:"
 		if req.StyleHint != "" {
-			hintsSection += fmt.Sprintf("\n- Gaya yang diinginkan: %s", req.StyleHint)
+			hintsSection += fmt.Sprintf("\n- Gaya: %s", req.StyleHint)
 		}
 		if req.DescriptionHint != "" {
-			hintsSection += fmt.Sprintf("\n- Deskripsi/konteks tambahan: %s", req.DescriptionHint)
+			hintsSection += fmt.Sprintf("\n- Konteks: %s", req.DescriptionHint)
 		}
-		hintsSection += "\nSesuaikan nama, deskripsi, dan gaya desain dengan preferensi ini."
 	}
 
-	userPrompt := fmt.Sprintf(`Buat 1 desain bouquet terbaik untuk acara %s dengan bunga pilihan customer:
+	userPrompt := fmt.Sprintf(`Desain bouquet untuk acara: %s
+Bunga pilihan customer:
 %s%s
 
-Total tangkai yang dipilih customer: %d tangkai
-Harga paket Mini: Rp%d (untuk %d tangkai — JANGAN UBAH angka ini)
-Harga paket Premium: Rp%d (untuk %d tangkai — JANGAN UBAH angka ini)
+TECHNICAL REQUIREMENTS:
+- Total bunga: %d jenis
+- Mini Bouquet: Rp%d untuk %d stem (balance antara beauty dan size)
+- Premium Bouquet: Rp%d untuk %d stem (lebih voluminous)
 
-Jawab HANYA dengan JSON ini (tanpa markdown):
+Buat 1 desain bouquet TERBAIK dengan prinsip design florist profesional.
+Tambahkan baby's breath atau eucalyptus untuk filler dan texture.
+Wrapping elegant dengan color yang cocok.
+
+Jawab ONLY dengan JSON (no markdown):
 {
-  "message": "pesan inspiratif 2-3 kalimat dalam Bahasa Indonesia",
+  "message": "Pesan inspirasi 2-3 kalimat yang mengkaitkan bunga, momen, dan design bouquet",
   "designs": [
     {
       "id": "design_1",
-      "name": "nama desain Bahasa Indonesia",
-      "description": "deskripsi singkat 1-2 kalimat Bahasa Indonesia",
-      "style": "Romantic",
-      "image_prompt": "detailed english prompt for bouquet image generation",
-      "small": {"label": "Mini Bouquet", "price": %d, "description": "deskripsi mini Bahasa Indonesia", "stem_count": %d},
-      "large": {"label": "Premium Bouquet", "price": %d, "description": "deskripsi premium Bahasa Indonesia", "stem_count": %d}
+      "name": "Nama design (3-4 kata bahasa Indonesia yang elegan)",
+      "description": "Deskripsi design 1-2 kalimat - jelaskan focal point, color palette, dan overall feel",
+      "style": "Style description (contoh: Romantic Modern, Minimalist Elegant, Luxe Glamour)",
+      "image_prompt": "professional florist bouquet with [flower names] arranged in [arrangement style], elegant [color] wrapping, premium quality, professional photography, studio lighting, white background, flowers are fresh and vibrant, composition is balanced, perfect for [occasion]",
+      "small": {
+        "label": "Mini Bouquet",
+        "price": %d,
+        "description": "Ukuran elegan untuk personal atau hadiah intimate",
+        "stem_count": %d
+      },
+      "large": {
+        "label": "Premium Bouquet",
+        "price": %d,
+        "description": "Ukuran mewah dengan volume lebih besar dan impact visual yang kuat",
+        "stem_count": %d
+      }
     }
   ]
 }`,
@@ -384,7 +408,7 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
 	response, err := callGroq(system, userPrompt)
 	if err != nil {
 		log.Printf("[Agent2] callGroq error: %v — menggunakan fallback", err)
-		return agent2Fallback(totalFlowerPrice, stemSmall, stemLarge), nil
+		return agent2Fallback(stemSmall, stemLarge), nil
 	}
 
 	cleaned := extractJSON(response)
@@ -393,7 +417,7 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
 	var result models.GenerateBouquetResponse
 	if err := json.Unmarshal([]byte(cleaned), &result); err != nil {
 		log.Printf("[Agent2] JSON parse error: %v — menggunakan fallback", err)
-		return agent2Fallback(totalFlowerPrice, stemSmall, stemLarge), nil
+		return agent2Fallback(stemSmall, stemLarge), nil
 	}
 
 	// Pastikan stem_count & price konsisten dengan pilihan user (override jika AI mengubah)
@@ -410,18 +434,18 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
 	return &result, nil
 }
 
-func agent2Fallback(totalFlowerPrice int64, stemSmall, stemLarge int) *models.GenerateBouquetResponse {
-	small := totalFlowerPrice + 30000
-	large := totalFlowerPrice*2 + 75000
+func agent2Fallback(stemSmall, stemLarge int) *models.GenerateBouquetResponse {
+	const small int64 = 35000
+	const large int64 = 75000
 	return &models.GenerateBouquetResponse{
-		Message: "Kombinasi bunga yang indah! Berikut tiga konsep desain bouquet spesial untukmu.",
+		Message: "Kombinasi bunga yang indah! Berikut desain bouquet elegan untuk momen spesialmu.",
 		Designs: []models.BouquetDesign{
 			{
-				ID: "design_1", Name: "Taman Romantis", Style: "Romantic",
-				Description: "Desain klasik penuh kelembutan dengan dominasi warna hangat.",
-				ImagePrompt: "romantic bouquet with mixed flowers, soft pink and red tones, elegant white wrap",
-				SmallSize:   models.SizeVariant{Label: "Mini Bouquet", Price: small, Description: "Pas untuk hadiah personal", StemCount: stemSmall},
-				LargeSize:   models.SizeVariant{Label: "Premium Bouquet", Price: large, Description: "Tampilan mewah dan mengesankan", StemCount: stemLarge},
+				ID: "design_1", Name: "Elegance Bloom", Style: "Romantic Elegance",
+				Description: "Desain balanced dengan focal point bunga utama, dikelilingi filler yang memberi depth dan texture.",
+				ImagePrompt: "professional florist bouquet arrangement with elegant wrapping, balanced composition, premium quality, fresh flowers, studio lighting",
+				SmallSize:   models.SizeVariant{Label: "Mini Bouquet", Price: small, Description: "Ukuran elegan untuk personal atau hadiah intimate", StemCount: stemSmall},
+				LargeSize:   models.SizeVariant{Label: "Premium Bouquet", Price: large, Description: "Ukuran mewah dengan volume lebih besar", StemCount: stemLarge},
 			},
 		},
 	}

@@ -10,6 +10,8 @@
         :class="{ loaded: imageLoaded }"
         @load="imageLoaded = true"
         @error="imageError = true"
+        @click="openImageZoom"
+        style="cursor: pointer;"
       />
       <span v-if="!imageLoaded" class="design-emoji">{{ emoji }}</span>
       <div class="design-style-badge">{{ design.style }}</div>
@@ -82,10 +84,18 @@
       </button>
     </div>
   </div>
+
+  <ImageZoomModal
+    :is-open="showImageZoom"
+    :image-url="imageUrl"
+    :image-alt="design.name"
+    @close="showImageZoom = false"
+  />
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
+import ImageZoomModal from './ImageZoomModal.vue'
 
 const props = defineProps({
   design: { type: Object, required: true },
@@ -97,6 +107,7 @@ defineEmits(['select'])
 
 const imageLoaded = ref(false)
 const imageError = ref(false)
+const showImageZoom = ref(false)
 
 const gradients = {
   Romantic: 'linear-gradient(135deg, #FFECD2 0%, #FCB69F 100%)',
@@ -129,6 +140,12 @@ const activeVariant = computed(() => {
 
 function formatPrice(p) {
   return (p || 0).toLocaleString('id-ID')
+}
+
+function openImageZoom() {
+  if (imageUrl.value) {
+    showImageZoom.value = true
+  }
 }
 </script>
 

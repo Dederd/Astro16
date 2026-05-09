@@ -13,9 +13,9 @@
       </div>
       <div class="recap-flowers">
         <span v-for="f in store.selectedFlowers" :key="f.flower_id" class="recap-tag">
-          🌸 {{ f.name }} × {{ f.quantity }}
+          🌸 {{ f.name }}
         </span>
-        <span class="recap-total">Total: {{ store.flowerCount }} tangkai</span>
+        <span class="recap-total">Total: {{ store.selectedFlowers.length }} bunga</span>
       </div>
     </div>
 
@@ -255,11 +255,11 @@ async function generate() {
   }, 2000)
 
   try {
-    // BUG FIX #2: kirim total_stem_count supaya AI output sinkron dengan pilihan user
-    const totalStemCount = store.selectedFlowers.reduce((sum, f) => sum + f.quantity, 0)
+    // Calculate total stem count (quantity = 1 for each selected flower)
+    const totalStemCount = store.selectedFlowers.length
 
     const res = await agentGenerateBouquet({
-      bouquet_type_id: store.selectedBouquetType.id,
+      bouquet_type_id: store.selectedBouquetType?.id || '',
       selected_flowers: store.selectedFlowers,
       total_stem_count: totalStemCount,
       style_hint: store.aiStyleHint || undefined,

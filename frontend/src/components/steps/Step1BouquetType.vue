@@ -2,7 +2,7 @@
   <div class="step-container fade-in">
     <div class="step-header">
       <h1>Apa Momen Spesialmu? 🎉</h1>
-      <p>Pilih jenis acara untuk mendapatkan rekomendasi bouquet yang tepat dari AI kami</p>
+      <p>Pilih jenis acara (opsional) untuk mendapatkan rekomendasi bouquet yang tepat dari AI kami</p>
     </div>
 
     <!-- Loading -->
@@ -61,7 +61,7 @@
     <div class="step-actions">
       <button
         class="btn btn-primary btn-lg"
-        :disabled="!store.selectedBouquetType || agentLoading"
+        :disabled="agentLoading"
         @click="goNext"
       >
         Lanjut Pilih Bunga →

@@ -107,8 +107,7 @@
             <span class="summary-flowers-label">Komposisi Bunga</span>
             <div class="summary-flowers-list">
               <div v-for="f in store.selectedFlowers" :key="f.flower_id" class="summary-flower-row">
-                <span>🌸 {{ f.name }} × {{ f.quantity }}</span>
-                <span v-if="f.price_per_stem" class="flower-subtotal">Rp{{ formatPrice(f.price_per_stem * f.quantity) }}</span>
+                <span>🌸 {{ f.name }}</span>
               </div>
             </div>
           </div>

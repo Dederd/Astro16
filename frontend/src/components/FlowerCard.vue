@@ -12,13 +12,14 @@
     <div v-if="isRecommended" class="rec-badge">★ Recommended</div>
 
     <!-- Image area -->
-    <div class="flower-img-wrap">
+    <div class="flower-img-wrap" @click.stop="openImageZoom">
       <img
         v-if="flower.image_url && !imgError"
         :src="resolveImageUrl(flower.image_url)"
         :alt="flower.name_id"
         class="flower-img"
         @error="imgError = true"
+        style="cursor: pointer;"
       />
       <div v-if="!flower.image_url || imgError" class="flower-emoji-placeholder">
         {{ flower.emoji || flowerEmoji }}
@@ -49,30 +50,30 @@
           :style="`background: ${color}; border: 1.5px solid ${color === '#FAFAFA' || color === '#FFFFFF' ? '#ddd' : color}`"
         ></span>
       </div>
-
-      <!-- BUG FIX #1: Qty control di dalam card info, bukan di atas popup -->
-      <!-- Gunakan @click.stop supaya tidak trigger card toggle -->
-      <div v-if="isSelected && flower.is_available" class="qty-control" @click.stop>
-        <button class="qty-btn" @click.stop="updateQty(-1)">−</button>
-        <span class="qty-value">{{ quantity }}</span>
-        <button class="qty-btn" @click.stop="updateQty(1)">+</button>
-      </div>
     </div>
   </div>
+
+  <ImageZoomModal
+    :is-open="showImageZoom"
+    :image-url="resolveImageUrl(flower.image_url)"
+    :image-alt="flower.name_id"
+    @close="showImageZoom = false"
+  />
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import ImageZoomModal from './ImageZoomModal.vue'
 
 const props = defineProps({
   flower: { type: Object, required: true },
   isSelected: { type: Boolean, default: false },
-  isRecommended: { type: Boolean, default: false },
-  quantity: { type: Number, default: 1 }
+  isRecommended: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['toggle', 'update-qty'])
+const emit = defineEmits(['toggle'])
 const imgError = ref(false)
+const showImageZoom = ref(false)
 
 // Convert Google Drive share/view URL to direct thumbnail URL
 function resolveImageUrl(url) {
@@ -101,8 +102,10 @@ function formatPrice(p) {
   return p.toLocaleString('id-ID')
 }
 
-function updateQty(delta) {
-  emit('update-qty', props.flower.id, props.quantity + delta)
+function openImageZoom() {
+  if (props.flower.image_url && !imgError.value) {
+    showImageZoom.value = true
+  }
 }
 </script>
 

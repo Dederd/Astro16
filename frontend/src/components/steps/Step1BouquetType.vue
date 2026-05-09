@@ -94,6 +94,13 @@ onMounted(async () => {
 })
 
 async function selectType(type) {
+  // Bug fix 2: allow unselect by clicking the already-selected type
+  if (store.selectedBouquetType?.id === type.id) {
+    store.selectBouquetType(null)
+    store.setAgentResponse('', '', [])
+    return
+  }
+
   store.selectBouquetType(type)
   store.setAgentResponse('', '', [])
   agentLoading.value = true
@@ -118,7 +125,8 @@ async function selectType(type) {
 }
 
 function goNext() {
-  if (store.selectedBouquetType) store.setStep(2)
+  // Bug fix 1: Pilih momen is optional, always allow proceeding
+  store.setStep(2)
 }
 </script>
 

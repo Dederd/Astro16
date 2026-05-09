@@ -1,8 +1,17 @@
 <template>
   <div class="design-card" :class="{ selected: isSelected }">
     <!-- Design header -->
-    <div class="design-visual" :style="`background: ${gradient}`">
-      <span class="design-emoji">{{ emoji }}</span>
+    <div class="design-visual" :style="imageLoaded ? '' : `background: ${gradient}`">
+      <img
+        v-if="imageUrl"
+        :src="imageUrl"
+        :alt="design.name"
+        class="design-image"
+        :class="{ loaded: imageLoaded }"
+        @load="imageLoaded = true"
+        @error="imageError = true"
+      />
+      <span v-if="!imageLoaded" class="design-emoji">{{ emoji }}</span>
       <div class="design-style-badge">{{ design.style }}</div>
       <div v-if="isSelected" class="selected-overlay">
         <span class="selected-icon">✓</span>
@@ -76,7 +85,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   design: { type: Object, required: true },
@@ -85,6 +94,9 @@ const props = defineProps({
 })
 
 defineEmits(['select'])
+
+const imageLoaded = ref(false)
+const imageError = ref(false)
 
 const gradients = {
   Romantic: 'linear-gradient(135deg, #FFECD2 0%, #FCB69F 100%)',
@@ -100,6 +112,15 @@ const emojis = {
 
 const gradient = computed(() => gradients[props.design.style] || gradients.Romantic)
 const emoji = computed(() => emojis[props.design.style] || '💐')
+
+// Generate image URL using Pollinations.ai (free, no API key needed)
+const imageUrl = computed(() => {
+  if (!props.design.image_prompt || imageError.value) return null
+  const prompt = encodeURIComponent(
+    props.design.image_prompt + ', professional flower bouquet photography, white background, high quality'
+  )
+  return `https://image.pollinations.ai/prompt/${prompt}?width=400&height=280&nologo=true&seed=${props.design.id}`
+})
 
 const activeVariant = computed(() => {
   if (!props.isSelected) return null
@@ -135,25 +156,45 @@ function formatPrice(p) {
 
 .design-visual {
   position: relative;
-  height: 160px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  background: var(--cream);
 }
 
-.design-emoji { font-size: 4rem; }
+.design-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.design-image.loaded {
+  opacity: 1;
+}
+
+.design-emoji {
+  font-size: 4rem;
+  z-index: 1;
+}
 
 .design-style-badge {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.92);
   color: var(--charcoal);
   font-size: 0.72rem;
   font-weight: 600;
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   letter-spacing: 0.05em;
+  z-index: 2;
 }
 
 .selected-overlay {
@@ -163,6 +204,7 @@ function formatPrice(p) {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 3;
 }
 
 .selected-icon {

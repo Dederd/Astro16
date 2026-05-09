@@ -52,6 +52,30 @@
       </div>
       <h2>Siap Generate Desain?</h2>
       <p>Klik tombol di bawah untuk membiarkan AI kami menciptakan desain bouquet yang sempurna untukmu</p>
+
+      <!-- Style & Description hints -->
+      <div class="ai-hint-inputs">
+        <div class="hint-input-row">
+          <label class="hint-label">🎨 Gaya Desain <span class="optional-tag">opsional</span></label>
+          <input
+            v-model="store.aiStyleHint"
+            class="hint-input"
+            placeholder="Contoh: Romantic, Minimalist, Rustic, Elegant..."
+            maxlength="100"
+          />
+        </div>
+        <div class="hint-input-row">
+          <label class="hint-label">📝 Deskripsi Tambahan <span class="optional-tag">opsional</span></label>
+          <textarea
+            v-model="store.aiDescriptionHint"
+            class="hint-textarea"
+            placeholder="Contoh: Untuk ulang tahun ibu, suasana hangat dan penuh kasih sayang..."
+            maxlength="300"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+
       <button class="btn btn-primary btn-xl" @click="generate">
         <span>🪄 Generate Bouquet Sekarang</span>
       </button>
@@ -326,7 +350,7 @@ async function generate() {
 
 .generate-zone {
   text-align: center;
-  padding: 60px 32px;
+  padding: 48px 32px;
   background: linear-gradient(135deg, #FFF8F5 0%, #FDF0EC 100%);
   border-radius: 24px;
   border: 1px dashed var(--blush);
@@ -336,7 +360,63 @@ async function generate() {
 .gen-flower { font-size: 5rem; margin-bottom: 8px; }
 .gen-sparkles { font-size: 1.5rem; letter-spacing: 8px; }
 .generate-zone h2 { font-size: 1.8rem; margin-bottom: 12px; color: var(--charcoal); }
-.generate-zone p { font-size: 0.95rem; color: var(--warm-gray); max-width: 480px; margin: 0 auto 32px; line-height: 1.6; }
+.generate-zone p { font-size: 0.95rem; color: var(--warm-gray); max-width: 480px; margin: 0 auto 24px; line-height: 1.6; }
+
+/* AI Hint Inputs inside generate zone */
+.ai-hint-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+  margin: 0 auto 28px;
+  text-align: left;
+}
+.hint-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hint-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.optional-tag {
+  font-size: 0.7rem;
+  color: var(--warm-gray);
+  font-weight: 400;
+  background: var(--light-gray);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+.hint-input,
+.hint-textarea {
+  width: 100%;
+  border: 1.5px solid var(--blush);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  color: var(--charcoal);
+  background: var(--white);
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.hint-input:focus,
+.hint-textarea:focus {
+  outline: none;
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(198,40,40,0.08);
+}
+.hint-textarea {
+  resize: vertical;
+  line-height: 1.5;
+  min-height: 80px;
+}
+
 .btn-xl { padding: 18px 44px; font-size: 1.05rem; }
 
 .ai-loading { text-align: center; padding: 80px 32px; }

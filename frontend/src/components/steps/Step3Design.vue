@@ -106,11 +106,11 @@
       </div>
 
       <div class="designs-label">
-        <h2>Pilih Desain Favoritmu</h2>
-        <p>Setiap desain tersedia dalam 2 ukuran — pilih yang paling sesuai</p>
+        <h2>Desain Bouquetmu</h2>
+        <p>Desain AI khusus untuk kombinasi bunga pilihanmu — tersedia dalam 2 ukuran</p>
       </div>
 
-      <div class="designs-grid">
+      <div class="designs-grid single">
         <DesignCard
           v-for="design in store.generatedDesigns"
           :key="design.id"
@@ -440,6 +440,7 @@ async function generate() {
 .designs-label p { color: var(--warm-gray); font-size: 0.9rem; }
 
 .designs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.designs-grid.single { grid-template-columns: minmax(280px, 480px); justify-content: center; }
 
 .regen-wrap { text-align: center; margin-bottom: 32px; }
 .quota-small { font-size: 0.75rem; color: var(--warm-gray); margin-left: 4px; }

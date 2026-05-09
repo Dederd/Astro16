@@ -352,7 +352,7 @@ Stem count harus SAMA PERSIS dengan nilai yang diberikan di prompt — jangan me
 		hintsSection += "\nSesuaikan nama, deskripsi, dan gaya desain dengan preferensi ini."
 	}
 
-	userPrompt := fmt.Sprintf(`Buat 3 desain bouquet berbeda untuk acara %s dengan bunga pilihan customer:
+	userPrompt := fmt.Sprintf(`Buat 1 desain bouquet terbaik untuk acara %s dengan bunga pilihan customer:
 %s%s
 
 Total tangkai yang dipilih customer: %d tangkai
@@ -371,24 +371,6 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
       "image_prompt": "detailed english prompt for bouquet image generation",
       "small": {"label": "Mini Bouquet", "price": %d, "description": "deskripsi mini Bahasa Indonesia", "stem_count": %d},
       "large": {"label": "Premium Bouquet", "price": %d, "description": "deskripsi premium Bahasa Indonesia", "stem_count": %d}
-    },
-    {
-      "id": "design_2",
-      "name": "nama desain Bahasa Indonesia",
-      "description": "deskripsi singkat",
-      "style": "Elegant",
-      "image_prompt": "detailed english prompt",
-      "small": {"label": "Mini Bouquet", "price": %d, "description": "deskripsi mini", "stem_count": %d},
-      "large": {"label": "Premium Bouquet", "price": %d, "description": "deskripsi premium", "stem_count": %d}
-    },
-    {
-      "id": "design_3",
-      "name": "nama desain Bahasa Indonesia",
-      "description": "deskripsi singkat",
-      "style": "Modern",
-      "image_prompt": "detailed english prompt",
-      "small": {"label": "Mini Bouquet", "price": %d, "description": "deskripsi mini", "stem_count": %d},
-      "large": {"label": "Premium Bouquet", "price": %d, "description": "deskripsi premium", "stem_count": %d}
     }
   ]
 }`,
@@ -396,10 +378,6 @@ Jawab HANYA dengan JSON ini (tanpa markdown):
 		priceSmall, stemSmall,
 		priceLarge, stemLarge,
 		// design_1
-		priceSmall, stemSmall, priceLarge, stemLarge,
-		// design_2
-		priceSmall, stemSmall, priceLarge, stemLarge,
-		// design_3
 		priceSmall, stemSmall, priceLarge, stemLarge,
 	)
 
@@ -444,20 +422,6 @@ func agent2Fallback(totalFlowerPrice int64, stemSmall, stemLarge int) *models.Ge
 				ImagePrompt: "romantic bouquet with mixed flowers, soft pink and red tones, elegant white wrap",
 				SmallSize:   models.SizeVariant{Label: "Mini Bouquet", Price: small, Description: "Pas untuk hadiah personal", StemCount: stemSmall},
 				LargeSize:   models.SizeVariant{Label: "Premium Bouquet", Price: large, Description: "Tampilan mewah dan mengesankan", StemCount: stemLarge},
-			},
-			{
-				ID: "design_2", Name: "Pesona Elegan", Style: "Elegant",
-				Description: "Desain modern dengan sentuhan mewah dan keanggunan tinggi.",
-				ImagePrompt: "elegant bouquet with premium flowers, white and gold tones, luxury ribbon",
-				SmallSize:   models.SizeVariant{Label: "Mini Bouquet", Price: small, Description: "Elegan dalam ukuran compact", StemCount: stemSmall},
-				LargeSize:   models.SizeVariant{Label: "Premium Bouquet", Price: large, Description: "Kehadiran yang memukau", StemCount: stemLarge},
-			},
-			{
-				ID: "design_3", Name: "Ceria Natural", Style: "Natural",
-				Description: "Tampilan segar alami dengan warna-warna cerah yang menyenangkan.",
-				ImagePrompt: "natural fresh bouquet with bright colorful flowers, green leaves, rustic twine",
-				SmallSize:   models.SizeVariant{Label: "Mini Bouquet", Price: small, Description: "Cerah dan menyegarkan", StemCount: stemSmall},
-				LargeSize:   models.SizeVariant{Label: "Premium Bouquet", Price: large, Description: "Kebun bunga dalam genggaman", StemCount: stemLarge},
 			},
 		},
 	}

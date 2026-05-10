@@ -12,14 +12,13 @@
     <div v-if="isRecommended" class="rec-badge">★ Recommended</div>
 
     <!-- Image area -->
-    <div class="flower-img-wrap" @click.stop="openImageZoom">
+    <div class="flower-img-wrap">
       <img
         v-if="flower.image_url && !imgError"
         :src="resolveImageUrl(flower.image_url)"
         :alt="flower.name_id"
         class="flower-img"
         @error="imgError = true"
-        style="cursor: pointer;"
       />
       <div v-if="!flower.image_url || imgError" class="flower-emoji-placeholder">
         {{ flower.emoji || flowerEmoji }}
@@ -28,6 +27,13 @@
         <span>Stok Habis</span>
       </div>
       <div v-if="isSelected" class="selected-check">✓</div>
+      <!-- Bug fix 4: small zoom button instead of whole image click -->
+      <button
+        v-if="flower.image_url && !imgError"
+        class="zoom-btn"
+        @click.stop="openImageZoom"
+        title="Lihat foto"
+      >🔍</button>
     </div>
 
     <!-- Info -->
@@ -203,6 +209,25 @@ function openImageZoom() {
   font-size: 0.8rem;
   font-weight: 700;
 }
+
+.zoom-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.zoom-btn:hover { background: white; }
 
 .unavailable { opacity: 0.7; cursor: not-allowed; }
 

@@ -46,6 +46,7 @@ func SaveOrder(order *models.Order) error {
 		FlowerCost:       order.FlowerCost,
 		MakingFee:        order.MakingFee,
 		AIFee:            order.AIFee,
+		ExtraQuotaFee:    order.ExtraQuotaFee,
 		ShippingCost:     order.ShippingCost,
 		CreatedAt:        order.CreatedAt,
 	}

@@ -380,6 +380,7 @@ func CreateOrder(c *gin.Context) {
 		FlowerCost:       req.FlowerCost,
 		MakingFee:        req.MakingFee,
 		AIFee:            req.AIFee,
+		ExtraQuotaFee:    req.ExtraQuotaFee,
 		ShippingCost:     req.ShippingCost,
 		Status:           "pending",
 		CreatedAt:        time.Now(),
@@ -808,11 +809,13 @@ func AdminGetStats(c *gin.Context) {
 	var totalRevenue struct{ Sum int64 }
 
 	database.DB.Model(&models.OrderDB{}).Count(&totalOrders)
-	// Count orders with status != 'pending' as paid (includes shipped, delivered, processing, etc)
-	database.DB.Model(&models.OrderDB{}).Where("status != ?", "pending").Count(&paidOrders)
+	// Only count orders with status that indicates successful payment
+	// (paid, processing, shipped, delivered) — excludes pending and cancelled
+	paidStatuses := []string{"paid", "processing", "shipped", "delivered"}
+	database.DB.Model(&models.OrderDB{}).Where("status IN ?", paidStatuses).Count(&paidOrders)
 	database.DB.Model(&models.OrderDB{}).Where("status = ?", "pending").Count(&pendingOrders)
-	// Sum revenue for all non-pending orders
-	database.DB.Model(&models.OrderDB{}).Where("status != ?", "pending").
+	// Revenue only from actually paid orders — cancelled orders are refunds, not income
+	database.DB.Model(&models.OrderDB{}).Where("status IN ?", paidStatuses).
 		Select("COALESCE(SUM(total_amount), 0) as sum").Scan(&totalRevenue)
 
 	c.JSON(http.StatusOK, gin.H{

@@ -5,14 +5,13 @@
     @click="item.is_available && $emit('select', item)"
   >
     <!-- Image -->
-    <div class="catalog-img-wrap" :style="`background: ${gradientFor(item.style)}`" @click.stop="openImageZoom">
+    <div class="catalog-img-wrap" :style="`background: ${gradientFor(item.style)}`">
       <img
         v-if="item.image_url && !imgError"
         :src="resolveImageUrl(item.image_url)"
         :alt="item.name"
         class="catalog-img"
         @error="imgError = true"
-        style="cursor: pointer;"
       />
       <div v-if="!item.image_url || imgError" class="catalog-emoji">
         {{ emojiFor(item.style) }}
@@ -20,6 +19,12 @@
       <div v-if="!item.is_available" class="out-badge">Stok Habis</div>
       <div v-if="isSelected" class="selected-badge">✓ Dipilih</div>
       <div class="occasion-tag">{{ occasionLabel }}</div>
+      <button
+        v-if="item.image_url && !imgError"
+        class="zoom-btn"
+        @click.stop="openImageZoom"
+        title="Lihat foto"
+      >🔍</button>
     </div>
 
     <div class="catalog-info">
@@ -157,6 +162,25 @@ function openImageZoom() {
 }
 .catalog-img { width: 100%; height: 100%; object-fit: cover; }
 .catalog-emoji { font-size: 4.5rem; }
+
+.zoom-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.zoom-btn:hover { background: white; }
 
 .out-badge, .selected-badge {
   position: absolute;

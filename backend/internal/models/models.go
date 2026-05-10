@@ -212,6 +212,7 @@ type OrderDB struct {
 	TotalAmount     int64               `gorm:"not null" json:"total_amount"`
 	Status          string              `gorm:"type:varchar(30);default:'pending'" json:"status"`
 	PaymentID       string              `gorm:"type:varchar(100)" json:"payment_id"`
+	SnapToken       string              `gorm:"type:varchar(255)" json:"snap_token"`
 	Notes           string              `gorm:"type:text" json:"notes"`
 	// Shipping fields
 	ShippingAddress  string `gorm:"type:text" json:"shipping_address"`
@@ -255,6 +256,7 @@ func (o *OrderDB) ToOrder() *Order {
 		TotalAmount:      o.TotalAmount,
 		Status:           o.Status,
 		PaymentID:        o.PaymentID,
+		SnapToken:        o.SnapToken,
 		Notes:            o.Notes,
 		ShippingAddress:  o.ShippingAddress,
 		ShippingCity:     o.ShippingCity,
@@ -288,6 +290,7 @@ type Order struct {
 	TotalAmount      int64            `json:"total_amount"`
 	Status           string           `json:"status"`
 	PaymentID        string           `json:"payment_id"`
+	SnapToken        string           `json:"snap_token"`
 	Notes            string           `json:"notes"`
 	ShippingAddress  string           `json:"shipping_address"`
 	ShippingCity     string           `json:"shipping_city"`

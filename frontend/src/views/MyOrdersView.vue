@@ -114,9 +114,11 @@
               <button
                 v-if="order.status === 'pending'"
                 class="btn btn-primary btn-sm"
-                @click="continuePayment(order)"
+                :disabled="paymentLoadingId === order.id"
+                @click.stop="continuePayment(order)"
               >
-                💳 Lanjut Pembayaran
+                <span v-if="paymentLoadingId === order.id">⏳ Memproses...</span>
+                <span v-else>💳 Lanjut Pembayaran</span>
               </button>
 
               <!-- Hubungi Penjual -->
@@ -148,7 +150,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getUserOrders, getOrder } from '@/services/api'
+import { getUserOrders, getOrder, createPaymentToken, notifyAdminNewOrder } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -256,17 +258,72 @@ function trackingSteps(status) {
   }))
 }
 
+const paymentLoadingId = ref(null)
+
+async function pollOrderStatus(orderId, maxRetries = 15, delayMs = 500) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await getOrder(orderId)
+      const o = res.data.data
+      if (o?.status === 'paid') return o
+      if (i < maxRetries - 1) await new Promise(r => setTimeout(r, delayMs))
+    } catch (e) { console.error('[pollOrderStatus] error:', e) }
+  }
+  return null
+}
+
 async function continuePayment(order) {
+  if (paymentLoadingId.value) return
+  paymentLoadingId.value = order.id
   try {
-    // Redirect to payment finish page with order id
-    // User will see option to proceed with payment
-    router.push({
-      name: 'payment-finish',
-      query: { order_id: order.id, status: 'pending' }
-    })
+    const res = await createPaymentToken(order.id)
+    const { token, redirect_url } = res.data.data
+
+    if (!token && !redirect_url) {
+      alert('Gagal mendapatkan token pembayaran.')
+      return
+    }
+
+    if (window.snap && token) {
+      window.snap.pay(token, {
+        onSuccess: async () => {
+          const paidOrder = await pollOrderStatus(order.id)
+          const finalOrder = paidOrder || (await getOrder(order.id)).data.data
+          if (finalOrder) {
+            const idx = orders.value.findIndex(o => o.id === order.id)
+            if (idx !== -1) orders.value[idx] = finalOrder
+          }
+          if (finalOrder?.status === 'paid') {
+            try {
+              await notifyAdminNewOrder({
+                order_id: order.id,
+                customer_name: finalOrder.customer_name,
+                customer_phone: finalOrder.customer_phone,
+                total_amount: finalOrder.total_amount,
+                design_name: finalOrder.design_name || finalOrder.catalog_item_id,
+              })
+            } catch (e) { console.error('[notifyAdmin] error:', e) }
+          }
+          router.push({ path: '/payment/finish', query: { order_id: order.id, status: 'success' } })
+        },
+        onPending: () => {
+          alert('Pembayaran sedang diproses. Harap tunggu konfirmasi.')
+        },
+        onError: () => {
+          alert('Pembayaran gagal. Silakan coba lagi.')
+        },
+        onClose: () => { paymentLoadingId.value = null },
+      })
+    } else if (redirect_url) {
+      window.location.href = redirect_url
+    } else {
+      alert('Gagal mendapatkan token pembayaran.')
+    }
   } catch (e) {
     console.error('[continuePayment] error:', e)
-    alert('Gagal melanjutkan pembayaran. Silakan coba lagi.')
+    alert('Gagal memproses pembayaran: ' + (e?.response?.data?.details || e?.response?.data?.error || e.message))
+  } finally {
+    paymentLoadingId.value = null
   }
 }
 </script>

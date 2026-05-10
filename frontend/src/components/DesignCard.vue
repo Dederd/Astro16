@@ -10,14 +10,18 @@
         :class="{ loaded: imageLoaded }"
         @load="imageLoaded = true"
         @error="imageError = true"
-        @click="openImageZoom"
-        style="cursor: pointer;"
       />
       <span v-if="!imageLoaded" class="design-emoji">{{ emoji }}</span>
       <div class="design-style-badge">{{ design.style }}</div>
       <div v-if="isSelected" class="selected-overlay">
         <span class="selected-icon">✓</span>
       </div>
+      <button
+        v-if="imageUrl && imageLoaded"
+        class="zoom-btn"
+        @click.stop="openImageZoom"
+        title="Lihat foto"
+      >🔍</button>
     </div>
 
     <div class="design-body">
@@ -232,6 +236,26 @@ function openImageZoom() {
   font-size: 1.2rem;
   font-weight: 700;
 }
+
+.zoom-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+  z-index: 4;
+}
+.zoom-btn:hover { background: white; }
 
 .design-body {
   padding: 20px;

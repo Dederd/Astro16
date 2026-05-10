@@ -226,66 +226,61 @@ async function continuePayment() {
   if (!orderId.value) return
   paymentLoading.value = true
   try {
-    // Buat payment token dari order yang pending
     const res = await createPaymentToken(orderId.value)
-    const { snap_token } = res.data
-    
-    if (!snap_token) {
+    // Backend returns { data: { token, redirect_url } }
+    const { token, redirect_url } = res.data.data
+
+    if (!token && !redirect_url) {
       alert('Gagal mendapatkan token pembayaran.')
       return
     }
 
-    // Buka Midtrans Snap popup
-    window.snap.pay(snap_token, {
-      onSuccess: async () => {
-        // Poll untuk wait webhook update status ke paid
-        try {
-          const paidOrder = await pollOrderStatus()
-          if (paidOrder) {
-            order.value = paidOrder
-          } else {
-            const orderRes = await getOrder(orderId.value)
-            order.value = orderRes.data.data
-          }
-          
-          // Notify admin
-          if (order.value?.status === 'paid') {
-            try {
-              await notifyAdminNewOrder({
-                order_id: orderId.value,
-                customer_name: order.value.customer_name,
-                customer_phone: order.value.customer_phone,
-                total_amount: order.value.total_amount,
-                design_name: order.value.design_name || order.value.catalog_item_id,
-              })
-            } catch (e) {
-              console.error('[notifyAdmin] error:', e)
+    if (window.snap && token) {
+      window.snap.pay(token, {
+        onSuccess: async () => {
+          try {
+            const paidOrder = await pollOrderStatus()
+            if (paidOrder) {
+              order.value = paidOrder
+            } else {
+              const orderRes = await getOrder(orderId.value)
+              order.value = orderRes.data.data
             }
+
+            if (order.value?.status === 'paid') {
+              try {
+                await notifyAdminNewOrder({
+                  order_id: orderId.value,
+                  customer_name: order.value.customer_name,
+                  customer_phone: order.value.customer_phone,
+                  total_amount: order.value.total_amount,
+                  design_name: order.value.design_name || order.value.catalog_item_id,
+                })
+              } catch (e) { console.error('[notifyAdmin] error:', e) }
+            }
+
+            router.push({ path: '/payment/finish', query: { order_id: orderId.value, status: 'success' } })
+          } catch (e) {
+            console.error('[continuePayment] error loading order:', e)
+            alert('Pembayaran berhasil namun gagal memuat detail. Cek pesanan Anda.')
           }
-          
-          // Update status ke success
-          router.push({
-            name: 'payment-finish',
-            query: { order_id: orderId.value, status: 'success' }
-          })
-        } catch (e) {
-          console.error('[continuePayment] error loading order:', e)
-          alert('Pembayaran berhasil namun gagal memuat detail. Cek pesanan Anda.')
-        }
-      },
-      onPending: () => {
-        alert('Pembayaran sedang diproses. Harap tunggu konfirmasi.')
-      },
-      onError: () => {
-        alert('Pembayaran gagal. Silakan coba lagi.')
-      },
-      onClose: () => {
-        // User menutup popup
-      }
-    })
+        },
+        onPending: () => {
+          alert('Pembayaran sedang diproses. Harap tunggu konfirmasi.')
+        },
+        onError: () => {
+          alert('Pembayaran gagal. Silakan coba lagi.')
+        },
+        onClose: () => { paymentLoading.value = false },
+      })
+    } else if (redirect_url) {
+      window.location.href = redirect_url
+    } else {
+      alert('Gagal mendapatkan token pembayaran.')
+    }
   } catch (e) {
     console.error('[continuePayment] error:', e)
-    alert('Gagal memproses pembayaran: ' + (e?.response?.data?.error || e.message))
+    alert('Gagal memproses pembayaran: ' + (e?.response?.data?.details || e?.response?.data?.error || e.message))
   } finally {
     paymentLoading.value = false
   }

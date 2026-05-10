@@ -230,10 +230,11 @@ type OrderDB struct {
 	// Generate count for rate limiting
 	GenerateCount int `gorm:"default:0" json:"generate_count"`
 	// Biaya breakdown
-	FlowerCost   int64 `gorm:"default:0" json:"flower_cost"`
-	MakingFee    int64 `gorm:"default:5000" json:"making_fee"`
-	AIFee        int64 `gorm:"default:0" json:"ai_fee"`
-	ShippingCost int64 `gorm:"default:0" json:"shipping_cost"`
+	FlowerCost    int64 `gorm:"default:0" json:"flower_cost"`
+	MakingFee     int64 `gorm:"default:5000" json:"making_fee"`
+	AIFee         int64 `gorm:"default:0" json:"ai_fee"`
+	ExtraQuotaFee int64 `gorm:"default:0" json:"extra_quota_fee"`
+	ShippingCost  int64 `gorm:"default:0" json:"shipping_cost"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

@@ -74,6 +74,11 @@ func GetAllOrders() []models.OrderDB {
 	return records
 }
 
+// SaveSnapToken menyimpan snap token ke order
+func SaveSnapToken(id, snapToken string) error {
+	return database.DB.Model(&models.OrderDB{}).Where("id = ?", id).Update("snap_token", snapToken).Error
+}
+
 // UpdateOrderStatus mengupdate status dan payment_id di PostgreSQL
 func UpdateOrderStatus(id, status, paymentID string) error {
 	updates := map[string]interface{}{"status": status}

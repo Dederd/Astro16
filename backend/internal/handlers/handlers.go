@@ -424,7 +424,15 @@ func CreatePaymentToken(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[CreatePaymentToken] order: %s, amount: %d", order.ID, order.TotalAmount)
+	log.Printf("[CreatePaymentToken] order: %s, amount: %d, status: %s", order.ID, order.TotalAmount, order.Status)
+
+	// Jika order masih pending dan sudah punya snap token, return token yang ada
+	// untuk menghindari error "order_id has already been taken" dari Midtrans
+	if order.Status == "pending" && order.SnapToken != "" {
+		log.Printf("[CreatePaymentToken] reusing existing snap token for order: %s", order.ID)
+		c.JSON(http.StatusOK, gin.H{"data": models.PaymentTokenResponse{Token: order.SnapToken}})
+		return
+	}
 
 	tokenResp, err := services.MidtransCreateToken(order)
 	if err != nil {
@@ -434,6 +442,11 @@ func CreatePaymentToken(c *gin.Context) {
 			"details": err.Error(),
 		})
 		return
+	}
+
+	// Simpan snap token ke DB
+	if err := services.SaveSnapToken(order.ID, tokenResp.Token); err != nil {
+		log.Printf("[CreatePaymentToken] gagal simpan snap token: %v", err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": tokenResp})

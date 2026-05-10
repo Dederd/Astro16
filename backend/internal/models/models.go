@@ -268,6 +268,7 @@ func (o *OrderDB) ToOrder() *Order {
 		FlowerCost:       o.FlowerCost,
 		MakingFee:        o.MakingFee,
 		AIFee:            o.AIFee,
+		ExtraQuotaFee:    o.ExtraQuotaFee,
 		ShippingCost:     o.ShippingCost,
 		CreatedAt:        o.CreatedAt,
 	}
@@ -298,11 +299,12 @@ type Order struct {
 	CatalogItemID    string           `json:"catalog_item_id"`
 	UserID           *uint            `json:"user_id,omitempty"`
 	// Breakdown biaya
-	FlowerCost   int64 `json:"flower_cost"`
-	MakingFee    int64 `json:"making_fee"`
-	AIFee        int64 `json:"ai_fee"`
-	ShippingCost int64 `json:"shipping_cost"`
-	CreatedAt    time.Time `json:"created_at"`
+	FlowerCost    int64 `json:"flower_cost"`
+	MakingFee     int64 `json:"making_fee"`
+	AIFee         int64 `json:"ai_fee"`
+	ExtraQuotaFee int64 `json:"extra_quota_fee"`
+	ShippingCost  int64 `json:"shipping_cost"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // ────────────────────────────────────────────────────────────
@@ -328,10 +330,11 @@ type CreateOrderRequest struct {
 	OrderSource      string           `json:"order_source"` // ai_generated | catalog
 	CatalogItemID    string           `json:"catalog_item_id"`
 	// Biaya breakdown
-	FlowerCost   int64 `json:"flower_cost"`
-	MakingFee    int64 `json:"making_fee"`
-	AIFee        int64 `json:"ai_fee"`
-	ShippingCost int64 `json:"shipping_cost"`
+	FlowerCost     int64 `json:"flower_cost"`
+	MakingFee      int64 `json:"making_fee"`
+	AIFee          int64 `json:"ai_fee"`
+	ExtraQuotaFee  int64 `json:"extra_quota_fee"`
+	ShippingCost   int64 `json:"shipping_cost"`
 }
 
 type PaymentTokenRequest struct {

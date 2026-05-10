@@ -25,6 +25,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useOrderStore } from '@/stores/order'
 import StepIndicator from '@/components/StepIndicator.vue'
 import Step1BouquetType from '@/components/steps/Step1BouquetType.vue'
@@ -33,6 +34,9 @@ import Step3Design from '@/components/steps/Step3Design.vue'
 import Step4Checkout from '@/components/steps/Step4Checkout.vue'
 
 const store = useOrderStore()
+
+// Bug fix 2: always start fresh from step 1 when visiting /order
+onMounted(() => { store.reset() })
 </script>
 
 <style scoped>

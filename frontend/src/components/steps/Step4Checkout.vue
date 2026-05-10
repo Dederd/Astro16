@@ -254,6 +254,11 @@ async function handlePayment() {
     error.value = 'Lengkapi semua field yang wajib diisi (*).'
     return
   }
+  // Bug fix 1: prevent payment if total is 0 (design not selected)
+  if (!store.totalPrice || store.totalPrice <= 0) {
+    error.value = 'Terjadi kesalahan: total harga tidak valid. Kembali dan pilih desain bouquet.'
+    return
+  }
   error.value = ''
   paymentLoading.value = true
 

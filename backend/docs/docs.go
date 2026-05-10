@@ -986,6 +986,9 @@ const docTemplate = `{
                 "design_name": {
                     "type": "string"
                 },
+                "extra_quota_fee": {
+                    "type": "integer"
+                },
                 "flower_cost": {
                     "description": "Biaya breakdown",
                     "type": "integer"

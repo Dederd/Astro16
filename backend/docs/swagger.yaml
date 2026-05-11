@@ -97,6 +97,13 @@ definitions:
     - shipping_postcode
     - total_amount
     type: object
+  models.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   models.GenerateBouquetRequest:
     properties:
       bouquet_type_id:
@@ -147,6 +154,17 @@ definitions:
     - email
     - name
     - password
+    type: object
+  models.ResetPasswordRequest:
+    properties:
+      password:
+        minLength: 6
+        type: string
+      token:
+        type: string
+    required:
+    - password
+    - token
     type: object
   models.SelectedFlower:
     properties:
@@ -531,6 +549,28 @@ paths:
       summary: 'Agent 1: Verifikasi pilihan momen & rekomendasikan bunga'
       tags:
       - agent
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Forgot password request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Kirim link reset password ke email
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -588,6 +628,28 @@ paths:
             additionalProperties: true
             type: object
       summary: Register user baru
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset password request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Reset password dengan token dari email
       tags:
       - auth
   /bouquet-types:

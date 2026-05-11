@@ -458,6 +458,26 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token    string `json:"token" binding:"required"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type PasswordResetTokenDB struct {
+	ID        uint      `gorm:"primaryKey;autoIncrement"`
+	UserID    uint      `gorm:"not null;index"`
+	Token     string    `gorm:"type:varchar(64);uniqueIndex;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	Used      bool      `gorm:"default:false"`
+	CreatedAt time.Time
+}
+
+func (PasswordResetTokenDB) TableName() string { return "password_reset_tokens" }
+
 type AuthResponse struct {
 	Token string `json:"token"`
 	User  struct {

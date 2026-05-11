@@ -1,7 +1,12 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 	"strconv"
 	"strings"
@@ -141,6 +146,146 @@ func GetUserOrders(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": orders})
+}
+
+// ForgotPassword godoc
+// @Summary Kirim link reset password ke email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body models.ForgotPasswordRequest true "Forgot password request"
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/forgot-password [post]
+func ForgotPassword(c *gin.Context) {
+	var req models.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email tidak valid"})
+		return
+	}
+
+	var user models.UserDB
+	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		// Selalu return 200 agar tidak mengekspos apakah email terdaftar
+		c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, link reset password sudah dikirim"})
+		return
+	}
+
+	// Hapus token lama yang belum dipakai
+	database.DB.Where("user_id = ? AND used = false", user.ID).Delete(&models.PasswordResetTokenDB{})
+
+	// Buat token acak
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat token"})
+		return
+	}
+	tokenStr := hex.EncodeToString(tokenBytes)
+
+	resetToken := models.PasswordResetTokenDB{
+		UserID:    user.ID,
+		Token:     tokenStr,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+		Used:      false,
+	}
+	if err := database.DB.Create(&resetToken).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan token"})
+		return
+	}
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, tokenStr)
+
+	go sendResetEmail(user.Email, user.Name, resetLink)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, link reset password sudah dikirim"})
+}
+
+// ResetPassword godoc
+// @Summary Reset password dengan token dari email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body models.ResetPasswordRequest true "Reset password request"
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/reset-password [post]
+func ResetPassword(c *gin.Context) {
+	var req models.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
+		return
+	}
+
+	var resetToken models.PasswordResetTokenDB
+	if err := database.DB.Where("token = ? AND used = false", req.Token).First(&resetToken).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Link reset tidak valid atau sudah digunakan"})
+		return
+	}
+
+	if time.Now().After(resetToken.ExpiresAt) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Link reset sudah expired. Silakan minta link baru"})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal enkripsi password"})
+		return
+	}
+
+	if err := database.DB.Model(&models.UserDB{}).Where("id = ?", resetToken.UserID).Update("password_hash", string(hash)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update password"})
+		return
+	}
+
+	database.DB.Model(&resetToken).Update("used", true)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diubah. Silakan login dengan password baru"})
+}
+
+func sendResetEmail(toEmail, toName, resetLink string) {
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPass := os.Getenv("SMTP_PASS")
+	fromEmail := os.Getenv("SMTP_FROM")
+
+	if smtpHost == "" || smtpUser == "" || smtpPass == "" {
+		log.Printf("[sendResetEmail] SMTP tidak dikonfigurasi. Reset link: %s", resetLink)
+		return
+	}
+	if smtpPort == "" {
+		smtpPort = "587"
+	}
+	if fromEmail == "" {
+		fromEmail = smtpUser
+	}
+
+	subject := "Reset Password Bloome"
+	body := fmt.Sprintf(`Halo %s,
+
+Kami menerima permintaan reset password untuk akun Bloome kamu.
+
+Klik link berikut untuk membuat password baru:
+%s
+
+Link ini berlaku selama 1 jam. Jika kamu tidak meminta reset password, abaikan email ini.
+
+Salam,
+Tim Bloome 🌸`, toName, resetLink)
+
+	msg := fmt.Sprintf("From: Bloome <%s>\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		fromEmail, toEmail, subject, body)
+
+	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
+	addr := smtpHost + ":" + smtpPort
+	if err := smtp.SendMail(addr, auth, fromEmail, []string{toEmail}, []byte(msg)); err != nil {
+		log.Printf("[sendResetEmail] Gagal kirim email ke %s: %v", toEmail, err)
+	} else {
+		log.Printf("[sendResetEmail] Email berhasil dikirim ke %s", toEmail)
+	}
 }
 
 // ─── Middleware ──────────────────────────────────────────────

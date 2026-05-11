@@ -302,6 +302,43 @@ func MidtransCreateToken(order *models.Order) (*models.PaymentTokenResponse, err
 	}, nil
 }
 
+// MidtransGetTransactionStatus mengecek status transaksi di Midtrans
+// dan mengembalikan redirect_url jika masih bisa dibayar
+func MidtransGetTransactionStatus(orderID string) (string, string, error) {
+	serverKey := os.Getenv("MIDTRANS_SERVER_KEY")
+	isProduction := os.Getenv("MIDTRANS_IS_PRODUCTION") == "true"
+
+	statusURL := "https://api.sandbox.midtrans.com/v2/" + orderID + "/status"
+	if isProduction {
+		statusURL = "https://api.midtrans.com/v2/" + orderID + "/status"
+	}
+
+	req, err := http.NewRequest("GET", statusURL, nil)
+	if err != nil {
+		return "", "", err
+	}
+	auth := base64.StdEncoding.EncodeToString([]byte(serverKey + ":"))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(resp.Body)
+	log.Printf("[MidtransGetTransactionStatus] order: %s, HTTP %d: %s", orderID, resp.StatusCode, string(respBody))
+
+	var result struct {
+		TransactionStatus string 
+		PaymentType       string 
+	}
+	json.Unmarshal(respBody, &result)
+
+	return result.TransactionStatus, result.PaymentType, nil
+}
+
 // MidtransCreateQuotaToken membuat Snap token untuk pembelian kuota generate
 func MidtransCreateQuotaToken(order *models.Order, sessionID string) (*models.PaymentTokenResponse, error) {
 	serverKey := os.Getenv("MIDTRANS_SERVER_KEY")

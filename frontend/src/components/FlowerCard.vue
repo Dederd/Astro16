@@ -4,9 +4,10 @@
     :class="{
       selected: isSelected,
       recommended: isRecommended,
-      unavailable: !flower.is_available
+      unavailable: !flower.is_available,
+      disabled: disabled
     }"
-    @click="flower.is_available && $emit('toggle', flower)"
+    @click="flower.is_available && !disabled && $emit('toggle', flower)"
   >
     <!-- Recommended badge -->
     <div v-if="isRecommended" class="rec-badge">★ Recommended</div>
@@ -71,7 +72,8 @@ import ImageZoomModal from './ImageZoomModal.vue'
 const props = defineProps({
   flower: { type: Object, required: true },
   isSelected: { type: Boolean, default: false },
-  isRecommended: { type: Boolean, default: false }
+  isRecommended: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['toggle'])
@@ -230,6 +232,8 @@ function openImageZoom() {
 .zoom-btn:hover { background: white; }
 
 .unavailable { opacity: 0.7; cursor: not-allowed; }
+.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.disabled:hover { transform: none; box-shadow: none; }
 
 .flower-info { padding: 14px; }
 

@@ -5,6 +5,7 @@ import CatalogView from '@/views/CatalogView.vue'
 import PaymentFinishView from '@/views/PaymentFinishView.vue'
 import AdminView from '@/views/AdminView.vue'
 import MyOrdersView from '@/views/MyOrdersView.vue'
+import ResetPasswordView from '@/views/ResetPasswordView.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -13,6 +14,7 @@ const routes = [
   { path: '/payment/finish', component: PaymentFinishView },
   { path: '/admin', component: AdminView },
   { path: '/my-orders', component: MyOrdersView, meta: { requiresAuth: true } },
+  { path: '/reset-password', component: ResetPasswordView },
 ]
 
 const router = createRouter({

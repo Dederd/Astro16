@@ -72,6 +72,12 @@ export const getOrderTracking = (id) => api.get(`/orders/${id}/tracking`)
 export const createPaymentToken = (orderId) =>
   api.post('/payment/token', { order_id: orderId })
 
+export const forgotPassword = (email) =>
+  api.post('/auth/forgot-password', { email })
+
+export const resetPassword = (token, password) =>
+  api.post('/auth/reset-password', { token, password })
+
 // Admin notifications
 export const notifyAdminNewOrder = (data) => {
   // Buat request dengan admin key untuk notifikasi

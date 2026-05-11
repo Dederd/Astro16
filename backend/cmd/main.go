@@ -52,6 +52,8 @@ func main() {
 		api.POST("/auth/register", handlers.Register)
 		api.POST("/auth/login", handlers.Login)
 		api.GET("/auth/me", handlers.AuthMiddleware(), handlers.GetMe)
+		api.POST("/auth/forgot-password", handlers.ForgotPassword)
+		api.POST("/auth/reset-password", handlers.ResetPassword)
 
 		// Bouquet types
 		api.GET("/bouquet-types", handlers.GetBouquetTypes)

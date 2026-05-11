@@ -38,6 +38,7 @@ func Connect() {
 		&models.CatalogBouquetDB{},
 		&models.GenerateSessionDB{},
 		&models.DesignCacheDB{},
+		&models.PasswordResetTokenDB{},
 	); err != nil {
 		log.Fatalf("❌ Gagal auto-migrate: %v", err)
 	}

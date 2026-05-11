@@ -118,13 +118,17 @@ export const useOrderStore = defineStore('order', () => {
     recommendedFlowerIds.value = recs
   }
 
+  const MAX_FLOWERS = 3
+
   function toggleFlower(flower) {
     const idx = selectedFlowers.value.findIndex(f => f.flower_id === flower.id)
     if (idx === -1) {
+      if (selectedFlowers.value.length >= MAX_FLOWERS) return false
       selectedFlowers.value.push({ flower_id: flower.id, name: flower.name_id, quantity: 1 })
     } else {
       selectedFlowers.value.splice(idx, 1)
     }
+    return true
   }
 
   function isFlowerSelected(flowerId) {

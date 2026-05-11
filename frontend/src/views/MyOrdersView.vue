@@ -277,7 +277,17 @@ async function continuePayment(order) {
   paymentLoadingId.value = order.id
   try {
     const res = await createPaymentToken(order.id)
-    const { token, redirect_url } = res.data.data
+    const data = res.data.data
+
+    // Sudah terbayar (backend detect dari Midtrans)
+    if (data?.status === 'paid') {
+      const idx = orders.value.findIndex(o => o.id === order.id)
+      if (idx !== -1) orders.value[idx] = { ...orders.value[idx], status: 'paid' }
+      alert('Pembayaran sudah berhasil dikonfirmasi.')
+      return
+    }
+
+    const { token, redirect_url } = data || {}
 
     if (!token && !redirect_url) {
       alert('Gagal mendapatkan token pembayaran.')
@@ -321,7 +331,13 @@ async function continuePayment(order) {
     }
   } catch (e) {
     console.error('[continuePayment] error:', e)
-    alert('Gagal memproses pembayaran: ' + (e?.response?.data?.details || e?.response?.data?.error || e.message))
+    const status = e?.response?.status
+    const errData = e?.response?.data
+    if (status === 410 || errData?.status === 'expire' || errData?.status === 'cancel') {
+      alert('Sesi pembayaran sudah expired. Silakan hubungi kami untuk membuat pesanan baru.')
+    } else {
+      alert('Gagal memproses pembayaran: ' + (errData?.details || errData?.error || e.message))
+    }
   } finally {
     paymentLoadingId.value = null
   }

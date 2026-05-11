@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"bouquet-app/internal/database"
@@ -437,6 +439,39 @@ func CreatePaymentToken(c *gin.Context) {
 	tokenResp, err := services.MidtransCreateToken(order)
 	if err != nil {
 		log.Printf("[CreatePaymentToken] Midtrans error: %v", err)
+
+		// Jika error karena order_id sudah dipakai, cek status di Midtrans
+		if strings.Contains(err.Error(), "already been taken") {
+			log.Printf("[CreatePaymentToken] order_id conflict, checking Midtrans status for: %s", order.ID)
+			status, _, statusErr := services.MidtransGetTransactionStatus(order.ID)
+			if statusErr == nil {
+				if status == "pending" {
+					// Transaksi masih pending, arahkan ke halaman payment Midtrans
+					isProduction := os.Getenv("MIDTRANS_IS_PRODUCTION") == "true"
+					paymentURL := "https://app.sandbox.midtrans.com/snap/v2/vtweb/" + order.ID
+					if isProduction {
+						paymentURL = "https://app.midtrans.com/snap/v2/vtweb/" + order.ID
+					}
+					c.JSON(http.StatusOK, gin.H{"data": models.PaymentTokenResponse{
+						RedirectURL: paymentURL,
+					}})
+					return
+				} else if status == "settlement" || status == "capture" {
+					// Sudah terbayar, update status order
+					services.UpdateOrderStatus(order.ID, "paid", order.ID)
+					c.JSON(http.StatusOK, gin.H{"data": map[string]string{"status": "paid"}})
+					return
+				} else if status == "expire" || status == "cancel" {
+					// Expired, beritahu frontend
+					c.JSON(http.StatusGone, gin.H{
+						"error":  "Sesi pembayaran sudah expired",
+						"status": status,
+					})
+					return
+				}
+			}
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Gagal membuat token pembayaran",
 			"details": err.Error(),

@@ -2,7 +2,7 @@
   <div class="step-container fade-in">
     <div class="step-header">
       <h1>Pilih Bungamu 🌺</h1>
-      <p>Pilih satu atau lebih jenis bunga untuk bouquetmu. Bunga bertanda ★ direkomendasikan AI.</p>
+      <p>Pilih hingga <strong>3 jenis bunga</strong> untuk bouquetmu. Bunga bertanda ★ direkomendasikan AI.</p>
     </div>
 
     <!-- Recommendations banner -->
@@ -50,6 +50,7 @@
         :flower="flower"
         :is-selected="store.isFlowerSelected(flower.id)"
         :is-recommended="store.recommendedFlowerIds.includes(flower.id)"
+        :disabled="store.selectedFlowers.length >= 3 && !store.isFlowerSelected(flower.id)"
         @toggle="store.toggleFlower"
       />
     </div>
@@ -65,7 +66,9 @@
     <transition name="slide-up">
       <div v-if="store.selectedFlowers.length > 0" class="selection-summary">
         <div class="summary-info">
-          <span class="summary-count">{{ store.selectedFlowers.length }} bunga dipilih</span>
+          <span class="summary-count" :class="{ 'count-full': store.selectedFlowers.length >= 3 }">
+            {{ store.selectedFlowers.length }}/3 bunga dipilih
+          </span>
           <div class="summary-flowers">
             <span v-for="f in store.selectedFlowers" :key="f.flower_id" class="summary-tag">
               {{ f.name }}
@@ -245,6 +248,9 @@ const displayFlowers = computed(() => {
   color: var(--deep-rose);
   margin-bottom: 6px;
   font-size: 0.9rem;
+}
+.summary-count.count-full {
+  color: #2e7d32;
 }
 
 .summary-flowers { display: flex; gap: 6px; flex-wrap: wrap; }

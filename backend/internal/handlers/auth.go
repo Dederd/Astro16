@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -198,7 +202,13 @@ func ForgotPassword(c *gin.Context) {
 	}
 	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, tokenStr)
 
-	go sendResetEmail(user.Email, user.Name, resetLink)
+	go func() {
+		if err := sendResetEmailErr(user.Email, user.Name, resetLink); err != nil {
+			log.Printf("[ForgotPassword] GAGAL kirim email ke %s: %v", user.Email, err)
+		} else {
+			log.Printf("[ForgotPassword] Email terkirim ke %s", user.Email)
+		}
+	}()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, link reset password sudah dikirim"})
 }
@@ -245,47 +255,165 @@ func ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diubah. Silakan login dengan password baru"})
 }
 
-func sendResetEmail(toEmail, toName, resetLink string) {
+func sendResetEmailErr(toEmail, toName, resetLink string) error {
+	// Coba Resend API dulu jika dikonfigurasi
+	if key := os.Getenv("RESEND_API_KEY"); key != "" && key != "re_GANTI_DENGAN_API_KEY_RESEND" {
+		if err := sendViaResend(key, toEmail, toName, resetLink); err != nil {
+			log.Printf("[sendResetEmailErr] Resend gagal: %v — fallback ke SMTP", err)
+		} else {
+			log.Printf("[sendResetEmailErr] Email terkirim via Resend ke %s", toEmail)
+			return nil
+		}
+	}
+
+	// SMTP
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	smtpUser := os.Getenv("SMTP_USER")
 	smtpPass := os.Getenv("SMTP_PASS")
 	fromEmail := os.Getenv("SMTP_FROM")
 
-	if smtpHost == "" || smtpUser == "" || smtpPass == "" {
-		log.Printf("[sendResetEmail] SMTP tidak dikonfigurasi. Reset link: %s", resetLink)
-		return
+	if smtpHost == "" || smtpUser == "" || smtpPass == "" ||
+		smtpUser == "your-email@gmail.com" || smtpPass == "your-app-password" || smtpPass == "your-16-char-app-password" {
+		return fmt.Errorf("SMTP belum dikonfigurasi")
 	}
 	if smtpPort == "" {
 		smtpPort = "587"
 	}
-	if fromEmail == "" {
+	if fromEmail == "" || fromEmail == "noreply@bloome.id" {
 		fromEmail = smtpUser
 	}
 
+	return sendViaGmailSMTP(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, toEmail, toName, resetLink)
+}
+
+func sendViaGmailSMTP(host, port, user, pass, from, toEmail, toName, resetLink string) error {
 	subject := "Reset Password Bloome"
-	body := fmt.Sprintf(`Halo %s,
+	bodyText := fmt.Sprintf(
+		"Halo %s,\r\n\r\nKami menerima permintaan reset password untuk akun Bloome kamu.\r\n\r\nKlik link berikut untuk membuat password baru:\r\n%s\r\n\r\nLink ini berlaku selama 1 jam.\r\nJika kamu tidak meminta reset password, abaikan email ini.\r\n\r\nSalam,\r\nTim Bloome",
+		toName, resetLink,
+	)
+	msg := fmt.Sprintf(
+		"From: Bloome <%s>\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		from, toEmail, subject, bodyText,
+	)
 
-Kami menerima permintaan reset password untuk akun Bloome kamu.
+	addr := host + ":" + port
 
-Klik link berikut untuk membuat password baru:
-%s
-
-Link ini berlaku selama 1 jam. Jika kamu tidak meminta reset password, abaikan email ini.
-
-Salam,
-Tim Bloome 🌸`, toName, resetLink)
-
-	msg := fmt.Sprintf("From: Bloome <%s>\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
-		fromEmail, toEmail, subject, body)
-
-	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-	addr := smtpHost + ":" + smtpPort
-	if err := smtp.SendMail(addr, auth, fromEmail, []string{toEmail}, []byte(msg)); err != nil {
-		log.Printf("[sendResetEmail] Gagal kirim email ke %s: %v", toEmail, err)
-	} else {
-		log.Printf("[sendResetEmail] Email berhasil dikirim ke %s", toEmail)
+	// Dial plain TCP dulu, lalu upgrade ke TLS via STARTTLS (dibutuhkan Gmail port 587)
+	conn, err := tls.Dial("tcp", host+":465", &tls.Config{ServerName: host})
+	if err != nil {
+		// port 465 gagal, coba 587 dengan STARTTLS
+		conn = nil
 	}
+
+	if conn != nil {
+		// SSL langsung (port 465)
+		client, err := smtp.NewClient(conn, host)
+		if err != nil {
+			return fmt.Errorf("smtp client (SSL): %w", err)
+		}
+		defer client.Close()
+		auth := smtp.PlainAuth("", user, pass, host)
+		if err = client.Auth(auth); err != nil {
+			return fmt.Errorf("auth (SSL): %w", err)
+		}
+		return smtpSend(client, from, toEmail, msg)
+	}
+
+	// STARTTLS (port 587)
+	auth := smtp.PlainAuth("", user, pass, host)
+	_ = addr
+	tlsConfig := &tls.Config{ServerName: host}
+
+	rawConn, err := tls.Dial("tcp", host+":587", tlsConfig)
+	if err != nil {
+		// Fallback: smtp.SendMail dengan STARTTLS otomatis
+		return smtp.SendMail(addr, auth, from, []string{toEmail}, []byte(msg))
+	}
+	defer rawConn.Close()
+
+	client, err := smtp.NewClient(rawConn, host)
+	if err != nil {
+		return fmt.Errorf("smtp client (587 TLS): %w", err)
+	}
+	defer client.Close()
+	if err = client.Auth(auth); err != nil {
+		return fmt.Errorf("auth (587 TLS): %w", err)
+	}
+	return smtpSend(client, from, toEmail, msg)
+}
+
+func smtpSend(client *smtp.Client, from, to, msg string) error {
+	if err := client.Mail(from); err != nil {
+		return fmt.Errorf("MAIL FROM: %w", err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		return fmt.Errorf("RCPT TO: %w", err)
+	}
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("DATA: %w", err)
+	}
+	_, err = w.Write([]byte(msg))
+	if err != nil {
+		return fmt.Errorf("write body: %w", err)
+	}
+	return w.Close()
+}
+
+func sendViaResend(apiKey, toEmail, toName, resetLink string) error {
+	from := os.Getenv("RESEND_FROM")
+	if from == "" {
+		from = "Bloome <onboarding@resend.dev>"
+	}
+
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#333">
+<h2 style="color:#8B0000">🌸 Bloome — Reset Password</h2>
+<p>Halo <strong>%s</strong>,</p>
+<p>Kami menerima permintaan reset password untuk akun Bloome kamu.</p>
+<p style="margin:28px 0;text-align:center">
+  <a href="%s" style="background:#8B0000;color:white;padding:14px 32px;border-radius:24px;text-decoration:none;font-weight:600;display:inline-block">
+    Buat Password Baru
+  </a>
+</p>
+<p style="font-size:0.85rem;color:#666">Link ini berlaku selama <strong>1 jam</strong>.<br>Jika kamu tidak meminta reset password, abaikan email ini.</p>
+<hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+<p style="font-size:0.8rem;color:#999">Tim Bloome 🌸</p>
+</body></html>`, toName, resetLink)
+
+	payload := map[string]interface{}{
+		"from":    from,
+		"to":      []string{toEmail},
+		"subject": "Reset Password Bloome",
+		"html":    htmlBody,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("buat request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("kirim request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("Resend API HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+	return nil
 }
 
 // ─── Middleware ──────────────────────────────────────────────

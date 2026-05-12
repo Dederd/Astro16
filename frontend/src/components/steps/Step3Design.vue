@@ -70,7 +70,7 @@
             v-model="store.aiDescriptionHint"
             class="hint-textarea"
             placeholder="Contoh: Untuk ulang tahun ibu, suasana hangat dan penuh kasih sayang..."
-            maxlength="300"
+            maxlength="5000"
             rows="3"
           ></textarea>
         </div>
@@ -258,12 +258,33 @@ async function generate() {
     // Calculate total stem count (quantity = 1 for each selected flower)
     const totalStemCount = store.selectedFlowers.length
 
+    // Build enriched image prompt context for backend
+    const flowerNames = store.selectedFlowers.map(f => f.name).join(', ')
+    const occasionName = store.selectedBouquetType?.name || ''
+    const styleHint = store.aiStyleHint?.trim() || ''
+    const descHint = store.aiDescriptionHint?.trim() || ''
+
+    // System-level image prompt guidance sent alongside user data
+    const imagePromptSystem = [
+      `Buat desain bouquet foto ultra-realistis berkualitas tinggi dengan spesifikasi berikut:`,
+      `- Bunga: ${flowerNames}`,
+      occasionName ? `- Momen: ${occasionName}` : '',
+      styleHint ? `- Gaya: ${styleHint}` : '',
+      descHint ? `- Konteks tambahan: ${descHint}` : '',
+      ``,
+      `Untuk setiap desain, buat image_prompt yang sangat detail dalam bahasa Inggris dengan format:`,
+      `[komposisi bunga spesifik], [warna dan tekstur detail], [wrapping dan pita], [pencahayaan studio profesional],`,
+      `soft natural light, bokeh background, ultra realistic, 8K, cinematic floral photography,`,
+      `professional studio setup, depth of field, elegant composition, white cream background`,
+    ].filter(Boolean).join('\n')
+
     const res = await agentGenerateBouquet({
       bouquet_type_id: store.selectedBouquetType?.id || '',
       selected_flowers: store.selectedFlowers,
       total_stem_count: totalStemCount,
       style_hint: store.aiStyleHint || undefined,
       description_hint: store.aiDescriptionHint || undefined,
+      image_prompt_system: imagePromptSystem,
     })
 
     const { designs, message } = res.data.data

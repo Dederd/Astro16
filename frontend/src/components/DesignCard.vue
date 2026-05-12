@@ -4,12 +4,13 @@
     <div class="design-visual" :style="imageLoaded ? '' : `background: ${gradient}`">
       <img
         v-if="imageUrl"
+        :key="retryCount"
         :src="imageUrl"
         :alt="design.name"
         class="design-image"
         :class="{ loaded: imageLoaded }"
         @load="imageLoaded = true"
-        @error="imageError = true"
+        @error="onImageError"
       />
       <span v-if="!imageLoaded" class="design-emoji">{{ emoji }}</span>
       <div class="design-style-badge">{{ design.style }}</div>
@@ -95,7 +96,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ImageZoomModal from './ImageZoomModal.vue'
 
 const props = defineProps({
@@ -108,6 +109,8 @@ defineEmits(['select'])
 
 const imageLoaded = ref(false)
 const imageError = ref(false)
+const retryCount = ref(0)
+const MAX_RETRIES = 3
 const showImageZoom = ref(false)
 
 const gradients = {
@@ -125,14 +128,35 @@ const emojis = {
 const gradient = computed(() => gradients[props.design.style] || gradients.Romantic)
 const emoji = computed(() => emojis[props.design.style] || '💐')
 
-// Generate image URL using Pollinations.ai (free, no API key needed)
+// Build image URL — retry with different seeds to avoid Pollinations.ai failures
 const imageUrl = computed(() => {
-  if (!props.design.image_prompt || imageError.value) return null
-  const prompt = encodeURIComponent(
-    props.design.image_prompt + ', professional flower bouquet photography, white background, high quality'
-  )
-  return `https://image.pollinations.ai/prompt/${prompt}?width=400&height=280&nologo=true&seed=${props.design.id}`
+  if (!props.design.image_prompt) return null
+  if (imageError.value && retryCount.value >= MAX_RETRIES) return null
+  const basePrompt = props.design.image_prompt + ', professional flower bouquet photography, white background, high quality, ultra realistic'
+  const prompt = encodeURIComponent(basePrompt)
+  // Use different seed on retry to avoid cached failures
+  const seed = retryCount.value === 0
+    ? (props.design.id || Math.floor(Math.random() * 9999))
+    : Math.floor(Math.random() * 99999)
+  return `https://image.pollinations.ai/prompt/${prompt}?width=400&height=280&nologo=true&seed=${seed}&model=flux`
 })
+
+// When design changes, reset image state
+watch(() => props.design.id, () => {
+  imageLoaded.value = false
+  imageError.value = false
+  retryCount.value = 0
+})
+
+function onImageError() {
+  if (retryCount.value < MAX_RETRIES) {
+    imageLoaded.value = false
+    retryCount.value++
+    imageError.value = false // Reset error to trigger new URL computation
+  } else {
+    imageError.value = true // Give up after max retries
+  }
+}
 
 const activeVariant = computed(() => {
   if (!props.isSelected) return null

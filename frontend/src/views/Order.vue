@@ -35,8 +35,12 @@ import Step4Checkout from '@/components/steps/Step4Checkout.vue'
 
 const store = useOrderStore()
 
-// Bug fix 2: always start fresh from step 1 when visiting /order
-onMounted(() => { store.reset() })
+// Only reset when starting a fresh AI order (not when coming from catalog checkout)
+onMounted(() => {
+  if (store.orderMode !== 'catalog' || !store.selectedCatalogItem) {
+    store.reset()
+  }
+})
 </script>
 
 <style scoped>

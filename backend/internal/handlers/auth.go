@@ -266,35 +266,11 @@ func ResetPassword(c *gin.Context) {
 }
 
 func sendResetEmailErr(toEmail, toName, resetLink string) error {
-	// Coba Resend API dulu jika dikonfigurasi
-	if key := os.Getenv("RESEND_API_KEY"); key != "" && key != "re_GANTI_DENGAN_API_KEY_RESEND" {
-		if err := sendViaResend(key, toEmail, toName, resetLink); err != nil {
-			log.Printf("[sendResetEmailErr] Resend gagal: %v — fallback ke SMTP", err)
-		} else {
-			log.Printf("[sendResetEmailErr] Email terkirim via Resend ke %s", toEmail)
-			return nil
-		}
+	key := os.Getenv("RESEND_API_KEY")
+	if key == "" || key == "re_GANTI_DENGAN_API_KEY_RESEND" {
+		return fmt.Errorf("RESEND_API_KEY belum dikonfigurasi")
 	}
-
-	// SMTP
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
-	smtpUser := os.Getenv("SMTP_USER")
-	smtpPass := os.Getenv("SMTP_PASS")
-	fromEmail := os.Getenv("SMTP_FROM")
-
-	if smtpHost == "" || smtpUser == "" || smtpPass == "" ||
-		smtpUser == "your-email@gmail.com" || smtpPass == "your-app-password" || smtpPass == "your-16-char-app-password" {
-		return fmt.Errorf("SMTP belum dikonfigurasi")
-	}
-	if smtpPort == "" {
-		smtpPort = "587"
-	}
-	if fromEmail == "" || fromEmail == "noreply@bloome.id" {
-		fromEmail = smtpUser
-	}
-
-	return sendViaGmailSMTP(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, toEmail, toName, resetLink)
+	return sendViaResend(key, toEmail, toName, resetLink)
 }
 
 func sendViaGmailSMTP(host, port, user, pass, from, toEmail, toName, resetLink string) error {

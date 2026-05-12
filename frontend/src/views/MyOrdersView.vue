@@ -124,7 +124,7 @@
               <!-- Hubungi Penjual -->
               <div class="contact-buttons">
                 <a
-                  :href="`https://wa.me/+62823235092101?text=Halo%2C%20saya%20ingin%20menanyakan%20tentang%20pesanan%20saya%20nomor%20${order.id}`"
+                  :href="`https://wa.me/+6282323509210?text=Halo%2C%20saya%20ingin%20menanyakan%20tentang%20pesanan%20saya%20nomor%20${order.id}`"
                   target="_blank"
                   class="btn btn-outline btn-sm whatsapp"
                   title="Chat via WhatsApp"
@@ -319,10 +319,17 @@ async function continuePayment(order) {
         onPending: () => {
           alert('Pembayaran sedang diproses. Harap tunggu konfirmasi.')
         },
-        onError: () => {
-          alert('Pembayaran gagal. Silakan coba lagi.')
+        onError: (result) => {
+          const msg = result?.status_message || ''
+          if (msg.toLowerCase().includes('expire') || result?.status_code === '407') {
+            alert('Sesi pembayaran sudah expired. Silakan buat pesanan baru.')
+          } else {
+            alert('Pembayaran gagal. Silakan coba lagi.')
+          }
         },
-        onClose: () => { paymentLoadingId.value = null },
+        onClose: () => {
+          paymentLoadingId.value = null
+        },
       })
     } else if (redirect_url) {
       window.location.href = redirect_url

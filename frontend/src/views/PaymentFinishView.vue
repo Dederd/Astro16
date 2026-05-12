@@ -150,6 +150,13 @@ const router = useRouter()
 
 const orderId = computed(() => route.query.order_id)
 const status = computed(() => route.query.status || 'success')
+const transactionStatus = computed(() => route.query.transaction_status || '')
+
+// Midtrans redirect ke sini untuk semua kondisi (finish/error/expire)
+// Jika expire atau error, langsung redirect ke my-orders
+if (['expire', 'deny', 'cancel'].includes(transactionStatus.value)) {
+  router.replace({ path: '/my-orders' })
+}
 
 const order = ref(null)
 const loadingOrder = ref(true)

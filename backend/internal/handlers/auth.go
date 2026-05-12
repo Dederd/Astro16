@@ -197,20 +197,30 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
+	if frontendURL == "" || frontendURL == "http://localhost:5173" {
+		// Coba deteksi dari request host
+		scheme := "https"
+		host := c.Request.Host
+		if host != "" && host != "localhost" && !strings.HasPrefix(host, "127.") {
+			frontendURL = scheme + "://" + host
+		} else {
+			frontendURL = "http://localhost:5173"
+		}
 	}
 	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, tokenStr)
 
-	go func() {
-		if err := sendResetEmailErr(user.Email, user.Name, resetLink); err != nil {
-			log.Printf("[ForgotPassword] GAGAL kirim email ke %s: %v", user.Email, err)
-		} else {
-			log.Printf("[ForgotPassword] Email terkirim ke %s", user.Email)
-		}
-	}()
+	log.Printf("[ForgotPassword] Mencoba kirim email ke %s, link: %s", user.Email, resetLink)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Jika email terdaftar, link reset password sudah dikirim"})
+	if err := sendResetEmailErr(user.Email, user.Name, resetLink); err != nil {
+		log.Printf("[ForgotPassword] GAGAL kirim email ke %s: %v", user.Email, err)
+		// Hapus token jika email gagal dikirim
+		database.DB.Delete(&resetToken)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengirim email. Pastikan konfigurasi SMTP sudah benar."})
+		return
+	}
+
+	log.Printf("[ForgotPassword] Email berhasil terkirim ke %s", user.Email)
+	c.JSON(http.StatusOK, gin.H{"message": "Link reset password sudah dikirim ke email kamu"})
 }
 
 // ResetPassword godoc
